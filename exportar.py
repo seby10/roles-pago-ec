@@ -211,13 +211,13 @@ def libro_remuneraciones(tabla, empresa, calc):
         ("N.º trabajadores", 12, "0", lambda d: d["n"]),
         ("Remuneración mensual", 14, "#,##0.00", lambda d: d["sueldo"]),
         ("¿Cumple mínimo?", 11, "General", '=IF(F{r}>=D{r},"Sí","NO")'),
-        ("Aporte personal IESS", 13, "#,##0.00", "=F{r}*P_PERSONAL"),
-        ("Aporte patronal IESS 12,15 %", 14, "#,##0.00", "=F{r}*(P_PATRONAL+P_IECE_SECAP)"),
-        ("Décimo 13°", 12, "#,##0.00", "=F{r}/12"),
-        ("Décimo 14°", 12, "#,##0.00", "=SBU/12"),
-        ("Vacaciones", 12, "#,##0.00", "=F{r}/24"),
+        ("Aporte personal IESS", 13, "#,##0.00", "=ROUND(F{r}*P_PERSONAL,2)"),
+        ("Aporte patronal IESS 12,15 %", 14, "#,##0.00", "=ROUND(F{r}*P_PATRONAL,2)+ROUND(F{r}*P_IECE_SECAP,2)"),
+        ("Décimo 13°", 12, "#,##0.00", "=ROUND(F{r}/12,2)"),
+        ("Décimo 14°", 12, "#,##0.00", "=ROUND(SBU/12,2)"),
+        ("Vacaciones", 12, "#,##0.00", "=ROUND(F{r}/24,2)"),
         ("¿Fondos de reserva?", 11, "General", lambda d: "No"),   # ingresan el 01-09-2026: aún no cumplen el mes 13
-        ("Fondos de reserva", 13, "#,##0.00", '=IF(M{r}="Sí",F{r}*P_FONDOS,0)'),
+        ("Fondos de reserva", 13, "#,##0.00", '=IF(M{r}="Sí",ROUND(F{r}*P_FONDOS,2),0)'),
         ("Costo mensual por trabajador", 15, "#,##0.00", "=F{r}+I{r}+J{r}+K{r}+L{r}+N{r}"),
         ("Costo mensual total", 15, "#,##0.00", "=O{r}*E{r}"),
     ]
@@ -280,12 +280,12 @@ def libro_remuneraciones(tabla, empresa, calc):
     pasos = [   # (concepto, explicación, fórmula, formato); C6 = remuneración, C7 = aporte personal, C8 = base IR...
         ("Remuneración mensual", "Dato de la tabla de remuneraciones", f"={T}F{ini}", "#,##0.00"),
         ("Aporte personal IESS 9,45 %", "Remuneración × 9,45 %", f"={T}H{ini}", "#,##0.00"),
-        ("Ingreso gravado anual proyectado", "(Remuneración − aporte personal) × 12", "=(C6-C7)*12", "#,##0.00"),
+        ("Ingreso gravado anual proyectado", "(Remuneración − aporte personal) × 12", "=ROUND((C6-C7)*12,2)", "#,##0.00"),
         ("Fracción básica (desde)", "Límite inferior del tramo de la tabla IR", "=VLOOKUP(C8,TABLA_IR,1,TRUE)", "#,##0.00"),
         ("Impuesto de la fracción básica", "Impuesto fijo del tramo", "=VLOOKUP(C8,TABLA_IR,3,TRUE)", "#,##0.00"),
         ("% sobre el excedente", "Porcentaje del tramo", "=VLOOKUP(C8,TABLA_IR,4,TRUE)", "0.00%"),
-        ("Impuesto a la renta anual", "Impuesto fracción + (base − desde) × %", "=C10+(C8-C9)*C11", "#,##0.00"),
-        ("Retención mensual de IR", "IR anual ÷ 12", "=C12/12", "#,##0.00"),
+        ("Impuesto a la renta anual", "Impuesto fracción + (base − desde) × %", "=ROUND(C10+(C8-C9)*C11,2)", "#,##0.00"),
+        ("Retención mensual de IR", "IR anual ÷ 12", "=ROUND(C12/12,2)", "#,##0.00"),
         ("NETO A RECIBIR", "Remuneración − aporte personal − retención IR", "=C6-C7-C13", "#,##0.00"),
         ("Aporte patronal 12,15 %", "Remuneración × (11,15 % + 1 % IECE/SECAP)", f"={T}I{ini}", "#,##0.00"),
         ("Décimo tercero", "Remuneración ÷ 12", f"={T}J{ini}", "#,##0.00"),
@@ -377,9 +377,9 @@ if __name__ == "__main__":
     assert ws["A3"].value == "Régimen: Código del Trabajo · Tabla de remuneraciones 2026"
     assert ws.freeze_panes == "B6" and ws["E6"].value == 1 and ws["F6"].value == 1200 and ws["M6"].value == "No"
     for r in range(6, 10):                                   # cada celda de cálculo es fórmula y cita las entradas
-        esperado = {"G": f'=IF(F{r}>=D{r},"Sí","NO")', "H": f"=F{r}*P_PERSONAL",
-                    "I": f"=F{r}*(P_PATRONAL+P_IECE_SECAP)", "J": f"=F{r}/12", "K": "=SBU/12", "L": f"=F{r}/24",
-                    "N": f'=IF(M{r}="Sí",F{r}*P_FONDOS,0)', "O": f"=F{r}+I{r}+J{r}+K{r}+L{r}+N{r}", "P": f"=O{r}*E{r}"}
+        esperado = {"G": f'=IF(F{r}>=D{r},"Sí","NO")', "H": f"=ROUND(F{r}*P_PERSONAL,2)",
+                    "I": f"=ROUND(F{r}*P_PATRONAL,2)+ROUND(F{r}*P_IECE_SECAP,2)", "J": f"=ROUND(F{r}/12,2)", "K": "=ROUND(SBU/12,2)", "L": f"=ROUND(F{r}/24,2)",
+                    "N": f'=IF(M{r}="Sí",ROUND(F{r}*P_FONDOS,2),0)', "O": f"=F{r}+I{r}+J{r}+K{r}+L{r}+N{r}", "P": f"=O{r}*E{r}"}
         for col, f in esperado.items():
             assert ws[f"{col}{r}"].value == f, f"{col}{r}: {ws[f'{col}{r}'].value}"
     assert ws["E10"].value == "=SUM(E6:E9)" and ws["P10"].value == "=SUM(P6:P9)"
@@ -389,7 +389,7 @@ if __name__ == "__main__":
 
     cd = wb["Cálculo detallado"]
     assert cd["C6"].value == "='Tabla de remuneraciones'!F6" and cd["C7"].value == "='Tabla de remuneraciones'!H6"
-    assert cd["C12"].value == "=C10+(C8-C9)*C11" and "TABLA_IR" in cd["C9"].value
+    assert cd["C12"].value == "=ROUND(C10+(C8-C9)*C11,2)" and "TABLA_IR" in cd["C9"].value
     assert all(str(cd[f"C{r}"].value).startswith("=") for r in range(6, 23))
     assert cd["A25"].value == "Sin rebaja por gastos personales (proyección simplificada)"
 
