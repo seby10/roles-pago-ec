@@ -1,0 +1,92 @@
+{% extends "base.html" %}
+{% block title %}Roles de pago{% endblock %}
+{% block content %}
+{% set r0 = roles[0] if roles else none %}
+
+<div class="page-head">
+  <div>
+    <div class="eyebrow">{{ EMPRESA.nombre }} · RUC {{ EMPRESA.ruc }}</div>
+    <h1 class="title">Roles de pago</h1>
+    <p class="meta"><b>{{ n_activos }}</b> empleado{{ '' if n_activos == 1 else 's' }} activo{{ '' if n_activos == 1 else 's' }}</p>
+  </div>
+  <div class="actions">
+    <a class="btn btn-primary btn-lg" href="{{ url_for('rol_nuevo') }}">Generar rol del mes</a>
+  </div>
+</div>
+
+{% if r0 %}
+<section class="stats" aria-label="Rol más reciente">
+  <div class="stat stat--neto">
+    <div class="stat-label"><span class="dot dot--neto"></span>Neto a pagar</div>
+    <div class="stat-value">{{ r0.total_neto|money }}</div>
+    <div class="stat-note">{{ MESES[r0.mes] }} {{ r0.anio }}</div>
+  </div>
+  <div class="stat stat--costo">
+    <div class="stat-label"><span class="dot dot--costo"></span>Costo empleador</div>
+    <div class="stat-value">{{ r0.total_costo|money }}</div>
+    <div class="stat-note">{{ MESES[r0.mes] }} {{ r0.anio }}</div>
+  </div>
+  <div class="stat">
+    <div class="stat-label">Planilla IESS</div>
+    <div class="stat-value">{{ r0.total_iess|money }}</div>
+    <div class="stat-note">{{ MESES[r0.mes] }} {{ r0.anio }}</div>
+  </div>
+  <div class="stat">
+    <div class="stat-label">Retención IR</div>
+    <div class="stat-value">{{ r0.total_ir|money }}</div>
+    <div class="stat-note">{{ MESES[r0.mes] }} {{ r0.anio }}</div>
+  </div>
+</section>
+
+<section class="panel">
+  <div class="panel-head">
+    <h2>Historial</h2>
+    <span class="hint">Valores en USD</span>
+  </div>
+  <div class="table-wrap">
+    <table class="ledger">
+      <thead>
+        <tr>
+          <th class="first">Periodo</th>
+          <th class="n">Empleados</th>
+          <th class="n">Total ingresos</th>
+          <th class="n">Descuentos</th>
+          <th class="n">Neto</th>
+          <th class="n">Costo empleador</th>
+          <th>Generado</th>
+          <th><span style="position:absolute;left:-9999px">Acciones</span></th>
+        </tr>
+      </thead>
+      <tbody>
+      {% for r in roles %}
+        <tr>
+          <td class="first"><a class="person" href="{{ url_for('rol_ver', id=r.id) }}">{{ MESES[r.mes] }} {{ r.anio }}</a></td>
+          <td class="n">{{ r.n_empleados }}</td>
+          <td class="n">{{ r.total_ingresos|cifra }}</td>
+          <td class="n">{{ r.total_descuentos|cifra }}</td>
+          <td class="n neto">{{ r.total_neto|cifra }}</td>
+          <td class="n costo">{{ r.total_costo|cifra }}</td>
+          <td>{{ r.generado_en }}</td>
+          <td style="text-align:right">
+            <a class="btn btn-sm" href="{{ url_for('rol_ver', id=r.id) }}">Ver</a>
+            <form class="inline" method="post" action="{{ url_for('rol_eliminar', id=r.id) }}"
+                  data-confirm="¿Eliminar el rol de {{ MESES[r.mes] }} {{ r.anio }}? Esta acción no se puede deshacer.">
+              <button class="btn btn-sm btn-ghost btn-danger" type="submit">Eliminar</button>
+            </form>
+          </td>
+        </tr>
+      {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</section>
+{% else %}
+<section class="panel">
+  <div class="empty">
+    <div class="title">Todavía no hay roles</div>
+    <p>Registra empleados y genera el rol del mes: el sistema calcula IESS, impuesto a la renta, décimos y el costo para la empresa.</p>
+    <a class="btn btn-primary btn-lg" href="{{ url_for('rol_nuevo') }}">Generar rol del mes</a>
+  </div>
+</section>
+{% endif %}
+{% endblock %}

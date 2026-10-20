@@ -1,0 +1,119 @@
+{% extends "base.html" %}
+{% block title %}{{ 'Editar empleado' if e and e.id else 'Nuevo empleado' }}{% endblock %}
+{% block content %}
+{% set editando = e and e.id %}
+{# Número para un input: 1500.0 -> 1500, 12.5 -> 12.5; si ya es texto (tras un error) se deja tal cual #}
+{% macro num(x) -%}
+{%- if x is number -%}{%- set s = '%.2f'|format(x) -%}{{ s[:-3] if s.endswith('.00') else s }}{%- else -%}{{ x }}{%- endif -%}
+{%- endmacro %}
+
+<div class="page-head">
+  <div>
+    <div class="eyebrow">Empleados</div>
+    <h1 class="title">{% if editando %}Editar <em>{{ e.nombres }} {{ e.apellidos }}</em>{% else %}Nuevo empleado{% endif %}</h1>
+  </div>
+  <div class="actions">
+    <a class="btn btn-ghost" href="{{ url_for('empleados_lista') }}">← Empleados</a>
+  </div>
+</div>
+
+{% if errores %}
+<div class="flash flash--danger" role="alert">
+  <div>
+    <strong>Revisa estos datos antes de guardar</strong>
+    <ul>{% for er in errores %}<li>{{ er }}</li>{% endfor %}</ul>
+  </div>
+</div>
+{% endif %}
+
+<form class="panel" method="post" action="{{ url_for('empleado_guardar') }}">
+  <input type="hidden" name="id" value="{{ e.id if e else '' }}">
+  <div class="panel-body">
+
+    <div class="eyebrow" style="margin-bottom:14px">Datos personales</div>
+    <div class="form-grid">
+      <div class="field span-4">
+        <label for="cedula">Cédula</label>
+        <input class="input" id="cedula" name="cedula" value="{{ e.cedula if e else '' }}" inputmode="numeric"
+               pattern="\d{10}" maxlength="10" autocomplete="off" required>
+        <div class="hint">Se valida el dígito verificador (módulo 10)</div>
+      </div>
+      <div class="field span-4">
+        <label for="nombres">Nombres</label>
+        <input class="input" id="nombres" name="nombres" value="{{ e.nombres if e else '' }}" required>
+      </div>
+      <div class="field span-4">
+        <label for="apellidos">Apellidos</label>
+        <input class="input" id="apellidos" name="apellidos" value="{{ e.apellidos if e else '' }}" required>
+      </div>
+      <div class="field span-6">
+        <label for="cargo">Cargo</label>
+        <input class="input" id="cargo" name="cargo" value="{{ e.cargo if e else '' }}" required>
+      </div>
+      <div class="field span-6">
+        <label for="tipo_contrato">Tipo de contrato</label>
+        <select class="select" id="tipo_contrato" name="tipo_contrato">
+          {% for t in tipos_contrato %}<option value="{{ t }}"{% if e and e.tipo_contrato == t %} selected{% endif %}>{{ t }}</option>{% endfor %}
+        </select>
+      </div>
+    </div>
+
+    <div style="margin-top:28px;padding-top:24px;border-top:1px solid var(--line)">
+      <div class="eyebrow" style="margin-bottom:14px">Contrato y sueldo</div>
+      <div class="form-grid">
+        <div class="field span-4">
+          <label for="sueldo">Sueldo mensual</label>
+          <div class="prefix">
+            <span>$</span>
+            <input class="input num" id="sueldo" name="sueldo" type="number" step="0.01" min="0.01"
+                   value="{{ num(e.sueldo) if e else '' }}" required>
+          </div>
+          <div class="hint">SBU 2026: $ {{ P.sbu }}</div>
+        </div>
+        <div class="field span-4">
+          <label for="fecha_ingreso">Fecha de ingreso</label>
+          <input class="input" id="fecha_ingreso" name="fecha_ingreso" type="date" value="{{ e.fecha_ingreso if e else '' }}" required>
+          <div class="hint">Define vacaciones y fondos de reserva (desde el mes 13)</div>
+        </div>
+        <label class="check span-4" for="activo">
+            <input type="checkbox" id="activo" name="activo" value="1"{% if e is none or e.activo %} checked{% endif %}>
+            <div><strong>Activo</strong><span>Entra en el rol del mes</span></div>
+          </label>
+      </div>
+    </div>
+
+    <div style="margin-top:28px;padding-top:24px;border-top:1px solid var(--line)">
+      <div class="eyebrow" style="margin-bottom:14px">Beneficios e impuesto a la renta</div>
+      <div class="form-grid">
+        <label class="check span-6" for="mensualiza_decimos">
+            <input type="checkbox" id="mensualiza_decimos" name="mensualiza_decimos" value="1"{% if e and e.mensualiza_decimos %} checked{% endif %}>
+            <div><strong>Mensualizar décimo tercero y cuarto</strong><span>Se pagan cada mes en el rol. Si no, se acumulan: 13° hasta el 24 de dic, 14° hasta el 15 de ago (Sierra)</span></div>
+          </label>
+        <label class="check span-6" for="mensualiza_fondos">
+            <input type="checkbox" id="mensualiza_fondos" name="mensualiza_fondos" value="1"{% if e is none or e.mensualiza_fondos %} checked{% endif %}>
+            <div><strong>Fondos de reserva mensualizados</strong><span>Por ley se pagan cada mes desde el mes 13. Desmarca si el trabajador pidió acumularlos en el IESS</span></div>
+          </label>
+        <div class="field span-6">
+          <label for="gastos_personales">Gastos personales (proyección anual)</label>
+          <div class="prefix">
+            <span>$</span>
+            <input class="input num" id="gastos_personales" name="gastos_personales" type="number" step="0.01" min="0"
+                   value="{{ num(e.gastos_personales) if e else '0' }}">
+          </div>
+          <div class="hint">Proyección anual del formulario de gastos personales que el trabajador entrega al empleador. Rebaja el IR: 18% del menor entre estos gastos y el tope por cargas.</div>
+        </div>
+        <div class="field span-6">
+          <label for="cargas">Cargas familiares</label>
+          <input class="input num" id="cargas" name="cargas" type="number" min="0" max="20" step="1" value="{{ e.cargas if e else 0 }}">
+          <div class="hint">0 cargas: 7 canastas · 1: 9 · 2: 11 · 3: 14 · 4: 17 · 5+: 20 (canasta $ {{ P.canasta }})</div>
+        </div>
+      </div>
+    </div>
+
+  </div>
+  <div class="form-foot">
+    <a class="btn btn-ghost" href="{{ url_for('empleados_lista') }}">Cancelar</a>
+    <button class="btn btn-primary" type="submit">Guardar empleado</button>
+  </div>
+</form>
+{% endblock %}

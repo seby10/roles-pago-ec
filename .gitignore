@@ -1,0 +1,14 @@
+# Base de datos local: cada quien tiene la suya (se crea sola al iniciar)
+roles.db
+*_respaldo.db
+
+# Entorno de Python
+.venv/
+__pycache__/
+*.pyc
+
+# Configuración local del editor / asistente
+.claude/
+.vscode/
+.idea/
+.DS_Store

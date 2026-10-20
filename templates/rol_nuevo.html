@@ -1,0 +1,102 @@
+{% extends "base.html" %}
+{% block title %}Nuevo rol · {{ MESES[mes] }} {{ anio }}{% endblock %}
+{% block content %}
+{# Número para un input: 0.0 -> 0, 12.5 -> 12.5, 100.25 -> 100.25 #}
+{% macro v(x) -%}
+{%- set s = '%.2f'|format(x or 0) -%}{{ s[:-3] if s.endswith('.00') else (s[:-1] if s.endswith('0') else s) }}
+{%- endmacro %}
+
+<div class="page-head">
+  <div>
+    <div class="eyebrow">Paso 1 de 2 · novedades del mes</div>
+    <h1 class="title">{{ MESES[mes] }} <em>{{ anio }}</em></h1>
+    <p class="meta">Ingresa solo lo que cambia este mes; el resto se calcula solo.</p>
+  </div>
+  <div class="actions">
+    <form class="periodo" method="get" action="{{ url_for('rol_nuevo') }}">
+      <select class="select" name="mes" aria-label="Mes" onchange="this.form.submit()">
+        {% for m in range(1, 13) %}<option value="{{ m }}"{% if m == mes %} selected{% endif %}>{{ MESES[m] }}</option>{% endfor %}
+      </select>
+      <select class="select" name="anio" aria-label="Año" onchange="this.form.submit()">
+        {% for a in (anios if anio in anios else anios + [anio]) %}<option value="{{ a }}"{% if a == anio %} selected{% endif %}>{{ a }}</option>{% endfor %}
+      </select>
+    </form>
+  </div>
+</div>
+
+{% if existe %}
+<div class="flash flash--warning" role="status"><span>Ya hay un rol para este periodo. Al generar se reemplaza con estos valores.</span></div>
+{% endif %}
+
+{% if not filas %}
+<section class="panel">
+  <div class="empty">
+    <div class="title">No hay empleados activos</div>
+    <p>Para generar el rol necesitas al menos un empleado activo.</p>
+    <a class="btn btn-primary" href="{{ url_for('empleados_lista') }}">Ir a empleados</a>
+  </div>
+</section>
+{% else %}
+<form method="post" action="{{ url_for('rol_generar') }}">
+  <input type="hidden" name="anio" value="{{ anio }}">
+  <input type="hidden" name="mes" value="{{ mes }}">
+  <section class="panel">
+    <div class="panel-head">
+      <h2>Novedades por empleado</h2>
+      <span class="hint">Valores del mes · USD</span>
+    </div>
+    <div class="table-wrap">
+      <table class="ledger">
+        <thead>
+          <tr>
+            <th class="first" rowspan="2">Empleado</th>
+            <th class="group sep">Tiempo</th>
+            <th class="group group--neto sep" colspan="2">Horas</th>
+            <th class="group group--neto sep">Ingresos variables</th>
+            <th class="group group--desc sep" colspan="2">Descuentos</th>
+          </tr>
+          <tr>
+            <th class="n sep">Días</th>
+            <th class="n sep">50% suplementarias</th>
+            <th class="n">100% extraordinarias</th>
+            <th class="n sep">Comisiones / bonos</th>
+            <th class="n sep">Anticipos</th>
+            <th class="n">Préstamo IESS</th>
+          </tr>
+        </thead>
+        <tbody>
+        {% for f in filas %}
+          {% set nom = f.e.nombres ~ ' ' ~ f.e.apellidos %}
+          <tr>
+            <td class="first">
+              <span class="person">{{ nom }}</span>
+              <div class="sub">{{ f.e.cargo }} · {{ f.e.sueldo|money }}</div>
+            </td>
+            <td class="n sep"><input class="input input-sm num" style="width:64px" type="number" min="1" max="30" step="1"
+                name="dias_{{ f.e.id }}" value="{{ f.dias }}" aria-label="Días trabajados de {{ nom }}" onfocus="this.select()"></td>
+            <td class="n sep"><input class="input input-sm num" style="width:92px" type="number" min="0" step="0.5"
+                name="h50_{{ f.e.id }}" value="{{ v(f.h50) }}" aria-label="Horas al 50% de {{ nom }}" onfocus="this.select()"></td>
+            <td class="n"><input class="input input-sm num" style="width:92px" type="number" min="0" step="0.5"
+                name="h100_{{ f.e.id }}" value="{{ v(f.h100) }}" aria-label="Horas al 100% de {{ nom }}" onfocus="this.select()"></td>
+            <td class="n sep"><input class="input input-sm num" style="width:92px" type="number" min="0" step="0.01"
+                name="com_{{ f.e.id }}" value="{{ v(f.comisiones) }}" aria-label="Comisiones y bonos de {{ nom }}" onfocus="this.select()"></td>
+            <td class="n sep"><input class="input input-sm num" style="width:92px" type="number" min="0" step="0.01"
+                name="ant_{{ f.e.id }}" value="{{ v(f.anticipos) }}" aria-label="Anticipos de {{ nom }}" onfocus="this.select()"></td>
+            <td class="n"><input class="input input-sm num" style="width:92px" type="number" min="0" step="0.01"
+                name="pre_{{ f.e.id }}" value="{{ v(f.prestamos_iess) }}" aria-label="Préstamo IESS de {{ nom }}" onfocus="this.select()"></td>
+          </tr>
+        {% endfor %}
+        </tbody>
+      </table>
+    </div>
+    <div class="panel-body">
+      <div class="note"><p><b>Valor hora</b> = sueldo ÷ 240. <b>50%</b>: suplementarias diurnas (máx. 4 h/día, 12 h/semana). <b>100%</b>: sábados, domingos, feriados y suplementarias de 24:00 a 06:00. Comisiones y bonos aportan al IESS y pagan IR. Anticipos y préstamos quirografarios del IESS solo restan del neto.</p></div>
+    </div>
+    <div class="form-foot">
+      <p class="hint" style="margin:0 auto 0 0;align-self:center">Se procesarán {{ filas|length }} empleado{{ '' if filas|length == 1 else 's' }} activo{{ '' if filas|length == 1 else 's' }}</p>
+      <button class="btn btn-primary btn-lg" type="submit">Calcular y generar rol →</button>
+    </div>
+  </section>
+</form>
+{% endif %}
+{% endblock %}

@@ -1,0 +1,134 @@
+{% extends "base.html" %}
+{% block title %}{{ d.nombre }} · {{ MESES[cab.mes] }} {{ cab.anio }}{% endblock %}
+{% block content %}
+{% set vh = d.sueldo / 240 %}
+{% macro estado(mensualizado, cuando) %}{% if mensualizado %}<span class="tag tag--neto">pagado en rol</span>{% else %}<span class="q">acumula · {{ cuando }}</span>{% endif %}{% endmacro %}
+
+<div class="page-head no-print">
+  <div>
+    <div class="eyebrow">Rol individual</div>
+    <h1 class="title">{{ d.nombre }}</h1>
+    <p class="meta">{{ d.cargo }} · {{ MESES[cab.mes] }} {{ cab.anio }}</p>
+  </div>
+  <div class="actions">
+    <a class="btn btn-ghost" href="{{ url_for('rol_ver', id=cab.id) }}">← Consolidado</a>
+    <button class="btn btn-primary" type="button" onclick="window.print()">Imprimir</button>
+  </div>
+</div>
+
+<article class="doc">
+  <header class="doc-head">
+    <div>
+      <div class="doc-org">{{ EMPRESA.nombre }}</div>
+      <div class="sub">RUC {{ EMPRESA.ruc }} · Región {{ EMPRESA.region }}</div>
+    </div>
+    <div class="doc-title"><small>Rol de pagos</small>{{ MESES[cab.mes] }} {{ cab.anio }}</div>
+  </header>
+
+  <dl class="doc-people">
+    <div><dt>Empleado</dt><dd>{{ d.nombre }}</dd></div>
+    <div><dt>Cédula</dt><dd class="mono">{{ d.cedula }}</dd></div>
+    <div><dt>Cargo</dt><dd>{{ d.cargo }}</dd></div>
+    <div><dt>Sueldo base</dt><dd class="mono">{{ d.sueldo|money }}</dd></div>
+    <div><dt>Días trabajados</dt><dd class="mono">{{ d.dias }} de 30</dd></div>
+    <div><dt>Valor hora</dt><dd class="mono">{{ vh|money }}</dd></div>
+    <div><dt>Gastos personales</dt><dd class="mono">{{ d.gastos_personales|money if d.gastos_personales else '—' }}</dd></div>
+    <div><dt>Cargas familiares</dt><dd class="mono">{{ d.cargas }}</dd></div>
+  </dl>
+
+  <div class="doc-cols">
+    <section class="doc-section doc-section--neto">
+      <h3>Ingresos</h3>
+      <div class="line"><span>Sueldo ganado {% if d.dias < 30 %}<span class="q">{{ d.dias }} días</span>{% endif %}</span><span class="amt">{{ d.sueldo_ganado|cifra }}</span></div>
+      {% if d.v_h50 %}<div class="line"><span>Horas suplementarias 50% <span class="q">{{ '%g'|format(d.h50) }} h × {{ (vh * 1.5)|cifra }}</span></span><span class="amt">{{ d.v_h50|cifra }}</span></div>{% endif %}
+      {% if d.v_h100 %}<div class="line"><span>Horas extraordinarias 100% <span class="q">{{ '%g'|format(d.h100) }} h × {{ (vh * 2)|cifra }}</span></span><span class="amt">{{ d.v_h100|cifra }}</span></div>{% endif %}
+      {% if d.comisiones %}<div class="line"><span>Comisiones / bonos</span><span class="amt">{{ d.comisiones|cifra }}</span></div>{% endif %}
+      {% if d.total_no_gravado %}
+        {% if d.decimo13_pagado %}<div class="line"><span>Décimo tercero <span class="q">mensualizado</span></span><span class="amt">{{ d.decimo13_pagado|cifra }}</span></div>{% endif %}
+        {% if d.decimo14_pagado %}<div class="line"><span>Décimo cuarto <span class="q">mensualizado</span></span><span class="amt">{{ d.decimo14_pagado|cifra }}</span></div>{% endif %}
+        {% if d.fondos_pagado %}<div class="line"><span>Fondos de reserva <span class="q">{{ P.fondos }}</span></span><span class="amt">{{ d.fondos_pagado|cifra }}</span></div>{% endif %}
+      {% endif %}
+      <div class="line line--total"><span>Total ingresos</span><span class="amt">{{ d.total_ingresos|money }}</span></div>
+    </section>
+
+    <section class="doc-section doc-section--desc">
+      <h3>Descuentos</h3>
+      <div class="line"><span>Aporte personal IESS <span class="q">{{ P.iess_personal }}</span></span><span class="amt">{{ d.iess_personal|cifra }}</span></div>
+      <div class="line"><span>Retención impuesto a la renta</span><span class="amt">{{ d.ir|cifra }}</span></div>
+      {% if d.anticipos %}<div class="line"><span>Anticipo de sueldo</span><span class="amt">{{ d.anticipos|cifra }}</span></div>{% endif %}
+      {% if d.prestamos_iess %}<div class="line"><span>Préstamo quirografario IESS</span><span class="amt">{{ d.prestamos_iess|cifra }}</span></div>{% endif %}
+      <div class="line line--total"><span>Total descuentos</span><span class="amt">{{ d.total_descuentos|money }}</span></div>
+    </section>
+  </div>
+
+  <div class="doc-neto">
+    <div class="lbl">Neto a recibir<small>Total ingresos − total descuentos</small></div>
+    <div class="amt">{{ d.neto|money }}</div>
+  </div>
+
+  <section class="doc-costo">
+    <div class="doc-section doc-section--costo"><h3>Costo empleador · informativo, no afecta el neto</h3></div>
+    <div class="grid">
+      <div>
+        <div class="line"><span>Décimo tercero <span class="q">1/12</span></span><span>{{ estado(d.mensualiza_decimos, 'paga 24 dic') }} <span class="amt">{{ d.p13|cifra }}</span></span></div>
+        <div class="line"><span>Décimo cuarto <span class="q">SBU/12</span></span><span>{{ estado(d.mensualiza_decimos, 'paga 15 ago' if EMPRESA.region in ('Sierra', 'Amazonía') else 'paga 15 mar') }} <span class="amt">{{ d.p14|cifra }}</span></span></div>
+        <div class="line"><span>Vacaciones <span class="q">1/24</span></span><span class="amt">{{ d.p_vac|cifra }}</span></div>
+        <div class="line"><span>Fondos de reserva <span class="q">{{ P.fondos }}</span></span>
+          <span>{% if d.tiene_fondos %}{{ estado(d.mensualiza_fondos, 'en el IESS') }} <span class="amt">{{ d.p_fondos|cifra }}</span>{% else %}<span class="q">desde el mes 13</span> <span class="amt zero">—</span>{% endif %}</span></div>
+      </div>
+      <div>
+        <div class="line"><span>Aporte patronal IESS <span class="q">{{ P.patronal }}</span></span><span class="amt">{{ d.patronal|cifra }}</span></div>
+        <div class="line"><span>IECE 0,5% + SECAP 0,5%</span><span class="amt">{{ d.iece_secap|cifra }}</span></div>
+        <div class="line"><span><b>Provisiones y aportes</b></span><span class="amt"><b>{{ d.total_provisiones|cifra }}</b></span></div>
+      </div>
+    </div>
+    <div class="line line--total doc-costo-total">
+      <span>Costo total empleador <span class="q">gravado {{ d.total_gravado|cifra }} + provisiones y aportes {{ d.total_provisiones|cifra }}</span></span>
+      <span class="amt">{{ d.costo_total|money }}</span>
+    </div>
+  </section>
+
+  {% if d.avisos %}<div class="flash flash--warning" style="margin: 20px 0 0">{{ d.avisos }}</div>{% endif %}
+
+  <details class="steps no-print">
+    <summary>¿Cómo se calculó este rol?</summary>
+    <ol>
+      <li><span class="what">Valor de la hora</span>
+        <span class="how">{{ d.sueldo|money }} ÷ 240 h = <b>{{ vh|money }}</b></span>
+        <span class="why">240 h = 40 h semanales × 4 semanas (mes comercial de 30 días).</span></li>
+      <li><span class="what">Total gravado</span>
+        <span class="how">{{ d.sueldo_ganado|cifra }} + {{ (d.v_h50 + d.v_h100)|cifra }} + {{ d.comisiones|cifra }} = <b>{{ d.total_gravado|money }}</b></span>
+        <span class="why">Sueldo ganado + horas extras + comisiones. Es la base del IESS, del IR y de las provisiones.</span></li>
+      <li><span class="what">Aporte personal IESS</span>
+        <span class="how">{{ d.total_gravado|cifra }} × {{ P.iess_personal }} = <b>{{ d.iess_personal|money }}</b></span></li>
+      <li><span class="what">Base imponible anual del IR</span>
+        <span class="how">({{ d.total_gravado|cifra }} − {{ d.iess_personal|cifra }}) × 12 = <b>{{ d.base_ir_anual|money }}</b></span>
+        <span class="why">Proyección del mes a 12 meses. El aporte al IESS es la única deducción de la base.</span></li>
+      <li><span class="what">Impuesto causado (tabla SRI 2026)</span>
+        <span class="how">{{ d.ir_impuesto_fb|cifra }} + {{ '%g'|format(d.ir_pct) }}% × ({{ d.base_ir_anual|cifra }} − {{ d.ir_tramo_desde|cifra }}) = <b>{{ d.ir_causado|money }}</b></span>
+        <span class="why">Fracción básica del tramo + porcentaje sobre el excedente. Hasta $ 12.208 no se paga.</span></li>
+      <li><span class="what">Rebaja por gastos personales</span>
+        {% if d.gastos_personales %}
+        <span class="how">18% × menor({{ d.gastos_personales|cifra }} ; tope {{ d.tope_gp|cifra }}) = <b>{{ d.rebaja_gp|money }}</b></span>
+        <span class="why">Tope = {{ P.canastas[[d.cargas, 5]|min] }} canastas × $ {{ P.canasta }} por {{ d.cargas }} carga{{ '' if d.cargas == 1 else 's' }} familiar{{ '' if d.cargas == 1 else 'es' }}. Resta del impuesto, no de la base.</span>
+        {% else %}
+        <span class="how">Sin proyección de gastos personales → <b>{{ 0|money }}</b></span>
+        <span class="why">Si el trabajador entrega su formulario de gastos personales, el impuesto baja hasta 18% de lo proyectado.</span>
+        {% endif %}</li>
+      <li><span class="what">Retención mensual del IR</span>
+        <span class="how">({{ d.ir_causado|cifra }} − {{ d.rebaja_gp|cifra }}) ÷ 12 = <b>{{ d.ir|money }}</b></span></li>
+      <li><span class="what">Neto a recibir</span>
+        <span class="how">{{ d.total_ingresos|cifra }} − {{ d.total_descuentos|cifra }} = <b>{{ d.neto|money }}</b></span>
+        {% if d.total_no_gravado %}<span class="why">Incluye {{ d.total_no_gravado|money }} no gravados (beneficios mensualizados): no aportan al IESS ni pagan IR.</span>{% endif %}</li>
+      <li><span class="what">Costo para la empresa</span>
+        <span class="how">{{ d.total_gravado|cifra }} + {{ d.total_provisiones|cifra }} = <b>{{ d.costo_total|money }}</b></span>
+        <span class="why">Gravado + provisiones + aportes patronales. Mensualizar un beneficio no cambia el costo, solo cuándo se paga.</span></li>
+    </ol>
+  </details>
+
+  <div class="firmas">
+    <div class="firma">Empleador<span>{{ EMPRESA.nombre }}</span></div>
+    <div class="firma">Recibí conforme<span>{{ d.nombre }} · C.I. {{ d.cedula }}</span></div>
+  </div>
+</article>
+{% endblock %}

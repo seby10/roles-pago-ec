@@ -1,0 +1,199 @@
+{% extends "base.html" %}
+{% block title %}Rol {{ MESES[cab.mes] }} {{ cab.anio }}{% endblock %}
+{% block content %}
+{% set aportes = cab.total_costo - cab.total_ingresos %}
+{% set tot = cab.total_costo or 1 %}
+{% macro pct(x) %}{{ '%.1f'|format(x / tot * 100) }}%{% endmacro %}
+
+<div class="page-head">
+  <div>
+    <div class="eyebrow">Rol de pagos consolidado</div>
+    <h1 class="title">{{ MESES[cab.mes] }} <em>{{ cab.anio }}</em></h1>
+    <p class="meta"><b>{{ cab.n_empleados }}</b> empleado{{ '' if cab.n_empleados == 1 else 's' }} · generado el {{ cab.generado_en }} · RUC {{ EMPRESA.ruc }}</p>
+  </div>
+  <div class="actions no-print">
+    <a class="btn btn-ghost" href="{{ url_for('roles_lista') }}">← Roles</a>
+    <a class="btn" href="{{ url_for('rol_nuevo', anio=cab.anio, mes=cab.mes) }}">Editar novedades</a>
+    <button class="btn btn-primary" type="button" onclick="window.print()">Imprimir</button>
+  </div>
+</div>
+
+<section class="stats" aria-label="Totales del mes">
+  <div class="stat stat--neto">
+    <div class="stat-label"><span class="dot dot--neto"></span>Neto a pagar</div>
+    <div class="stat-value">{{ cab.total_neto|money }}</div>
+    <div class="stat-note">transferencia a empleados</div>
+  </div>
+  <div class="stat">
+    <div class="stat-label">Total ingresos</div>
+    <div class="stat-value">{{ cab.total_ingresos|money }}</div>
+    <div class="stat-note">gravados + no gravados</div>
+  </div>
+  <div class="stat stat--desc">
+    <div class="stat-label"><span class="dot dot--desc"></span>Descuentos</div>
+    <div class="stat-value">{{ cab.total_descuentos|money }}</div>
+    <div class="stat-note">IESS, IR, anticipos y préstamos</div>
+  </div>
+  <div class="stat stat--costo">
+    <div class="stat-label"><span class="dot dot--costo"></span>Costo empleador</div>
+    <div class="stat-value">{{ cab.total_costo|money }}</div>
+    <div class="stat-note">lo que realmente cuesta la nómina</div>
+  </div>
+  <div class="stat">
+    <div class="stat-label">Planilla IESS</div>
+    <div class="stat-value">{{ cab.total_iess|money }}</div>
+    <div class="stat-note">personal + patronal + IECE/SECAP</div>
+  </div>
+  <div class="stat">
+    <div class="stat-label">Retención IR</div>
+    <div class="stat-value">{{ cab.total_ir|money }}</div>
+    <div class="stat-note">se declara al SRI</div>
+  </div>
+</section>
+
+<section class="panel">
+  <div class="panel-head">
+    <h2>¿De dónde sale el costo empleador?</h2>
+    <span class="hint">Cómo se reparte cada dólar que cuesta la nómina</span>
+  </div>
+  <div class="panel-body">
+    <div class="bar" role="img" aria-label="Neto {{ pct(cab.total_neto) }}, descuentos {{ pct(cab.total_descuentos) }}, aportes y provisiones {{ pct(aportes) }}">
+      <span class="neto" style="width: {{ cab.total_neto / tot * 100 }}%"></span>
+      <span class="desc" style="width: {{ cab.total_descuentos / tot * 100 }}%"></span>
+      <span class="costo" style="width: {{ aportes / tot * 100 }}%"></span>
+    </div>
+    <div class="equation">
+      <div><div class="term-label"><span class="dot dot--neto"></span>Neto al empleado</div>
+        <div class="term-value">{{ cab.total_neto|money }}</div><div class="term-pct">{{ pct(cab.total_neto) }}</div></div>
+      <div class="op">+</div>
+      <div><div class="term-label"><span class="dot dot--desc"></span>Descuentos</div>
+        <div class="term-value">{{ cab.total_descuentos|money }}</div><div class="term-pct">{{ pct(cab.total_descuentos) }}</div></div>
+      <div class="op">+</div>
+      <div><div class="term-label"><span class="dot dot--costo"></span>Aportes y provisiones</div>
+        <div class="term-value">{{ aportes|money }}</div><div class="term-pct">{{ pct(aportes) }}</div></div>
+      <div class="op">=</div>
+      <div class="term--total"><div class="term-label">Costo total</div>
+        <div class="term-value">{{ cab.total_costo|money }}</div><div class="term-pct">100%</div></div>
+    </div>
+    <p class="explain">
+      Neto + descuentos = total ingresos del rol ({{ cab.total_ingresos|money }}). Encima de eso la empresa paga aporte patronal
+      {{ P.patronal }}, IECE + SECAP {{ P.iece_secap }} y provisiona décimos, vacaciones y fondos de reserva.
+    </p>
+  </div>
+</section>
+
+<section class="panel">
+  <div class="panel-head">
+    <h2>Ingresos, descuentos y neto</h2>
+    <span class="hint">Valores en USD · clic en un nombre para ver su rol individual</span>
+  </div>
+  <div class="table-wrap">
+    <table class="ledger">
+      <thead>
+        <tr>
+          <th class="first" rowspan="2">Empleado</th>
+          <th class="group group--neto sep" colspan="5">Ingresos</th>
+          <th class="group group--desc sep" colspan="4">Descuentos</th>
+          <th class="n sep" rowspan="2">Neto a recibir</th>
+        </tr>
+        <tr>
+          <th class="n sep">Sueldo ganado</th><th class="n">Horas extras</th><th class="n">Comisiones</th>
+          <th class="n">No gravado</th><th class="n">Total</th>
+          <th class="n sep">IESS {{ P.iess_personal }}</th><th class="n">Retención IR</th><th class="n">Anticipos y préstamos</th><th class="n">Total</th>
+        </tr>
+      </thead>
+      <tbody>
+      {% for d in detalles %}
+        <tr>
+          <td class="first">
+            <a class="person" href="{{ url_for('rol_individual', id=cab.id, det_id=d.id) }}">{{ d.nombre }}</a>
+            {% if d.avisos %}<span class="tag tag--warn" title="{{ d.avisos }}">revisar</span>{% endif %}
+            <div class="sub">{{ d.cargo }}{% if d.dias < 30 %} · {{ d.dias }} días{% endif %}</div>
+          </td>
+          <td class="n sep">{{ d.sueldo_ganado|cifra }}</td>
+          <td class="n">{{ (d.v_h50 + d.v_h100)|dash }}</td>
+          <td class="n">{{ d.comisiones|dash }}</td>
+          <td class="n">{{ d.total_no_gravado|dash }}</td>
+          <td class="n strong">{{ d.total_ingresos|cifra }}</td>
+          <td class="n sep">{{ d.iess_personal|cifra }}</td>
+          <td class="n">{{ d.ir|dash }}</td>
+          <td class="n">{{ (d.anticipos + d.prestamos_iess)|dash }}</td>
+          <td class="n strong">{{ d.total_descuentos|cifra }}</td>
+          <td class="n sep neto">{{ d.neto|cifra }}</td>
+        </tr>
+      {% endfor %}
+      </tbody>
+      <tfoot>
+        <tr>
+          <td class="first">Totales</td>
+          <td class="n sep">{{ detalles|sum(attribute='sueldo_ganado')|cifra }}</td>
+          <td class="n">{{ (detalles|sum(attribute='v_h50') + detalles|sum(attribute='v_h100'))|cifra }}</td>
+          <td class="n">{{ detalles|sum(attribute='comisiones')|cifra }}</td>
+          <td class="n">{{ detalles|sum(attribute='total_no_gravado')|cifra }}</td>
+          <td class="n">{{ cab.total_ingresos|cifra }}</td>
+          <td class="n sep">{{ detalles|sum(attribute='iess_personal')|cifra }}</td>
+          <td class="n">{{ cab.total_ir|cifra }}</td>
+          <td class="n">{{ (detalles|sum(attribute='anticipos') + detalles|sum(attribute='prestamos_iess'))|cifra }}</td>
+          <td class="n">{{ cab.total_descuentos|cifra }}</td>
+          <td class="n sep neto">{{ cab.total_neto|cifra }}</td>
+        </tr>
+      </tfoot>
+    </table>
+  </div>
+</section>
+
+<section class="panel">
+  <div class="panel-head">
+    <h2>Costo empleador</h2>
+    <span class="hint">Valores en USD · provisiones y aportes no se descuentan al empleado</span>
+  </div>
+  <div class="table-wrap">
+    <table class="ledger">
+      <thead>
+        <tr>
+          <th class="first" rowspan="2">Empleado</th>
+          <th class="n sep" rowspan="2">Total gravado</th>
+          <th class="group group--costo sep" colspan="4">Provisiones</th>
+          <th class="group group--costo sep" colspan="2">Aportes</th>
+          <th class="n sep" rowspan="2">Costo total</th>
+        </tr>
+        <tr>
+          <th class="n sep">Décimo 13°</th><th class="n">Décimo 14°</th><th class="n">Vacaciones</th><th class="n">Fondos reserva</th>
+          <th class="n sep">Patronal {{ P.patronal }}</th><th class="n">IECE+SECAP</th>
+        </tr>
+      </thead>
+      <tbody>
+      {% for d in detalles %}
+        <tr>
+          <td class="first"><a class="person" href="{{ url_for('rol_individual', id=cab.id, det_id=d.id) }}">{{ d.nombre }}</a></td>
+          <td class="n sep">{{ d.total_gravado|cifra }}</td>
+          <td class="n sep">{% if d.mensualiza_decimos %}<span class="tag tag--neto" title="Se paga cada mes en el rol">en rol</span> {% endif %}{{ d.p13|cifra }}</td>
+          <td class="n">{% if d.mensualiza_decimos %}<span class="tag tag--neto" title="Se paga cada mes en el rol">en rol</span> {% endif %}{{ d.p14|cifra }}</td>
+          <td class="n">{{ d.p_vac|cifra }}</td>
+          <td class="n">
+            {% if d.tiene_fondos %}{% if d.mensualiza_fondos %}<span class="tag tag--neto" title="Se paga cada mes en el rol">en rol</span> {% endif %}{{ d.p_fondos|cifra }}
+            {% else %}<span class="tag tag--off" title="Aún no cumple el primer año de trabajo">desde el mes 13</span>{% endif %}
+          </td>
+          <td class="n sep">{{ d.patronal|cifra }}</td>
+          <td class="n">{{ d.iece_secap|cifra }}</td>
+          <td class="n sep costo">{{ d.costo_total|cifra }}</td>
+        </tr>
+      {% endfor %}
+      </tbody>
+      <tfoot>
+        <tr>
+          <td class="first">Totales</td>
+          <td class="n sep">{{ detalles|sum(attribute='total_gravado')|cifra }}</td>
+          <td class="n sep">{{ detalles|sum(attribute='p13')|cifra }}</td>
+          <td class="n">{{ detalles|sum(attribute='p14')|cifra }}</td>
+          <td class="n">{{ detalles|sum(attribute='p_vac')|cifra }}</td>
+          <td class="n">{{ detalles|sum(attribute='p_fondos')|cifra }}</td>
+          <td class="n sep">{{ detalles|sum(attribute='patronal')|cifra }}</td>
+          <td class="n">{{ detalles|sum(attribute='iece_secap')|cifra }}</td>
+          <td class="n sep costo">{{ cab.total_costo|cifra }}</td>
+        </tr>
+      </tfoot>
+    </table>
+  </div>
+</section>
+{% endblock %}
