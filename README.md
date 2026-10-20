@@ -10,11 +10,16 @@ Módulo demostrativo para un taller de clase: calcula el rol de pagos mensual de
 
 Solo necesitas **Python 3.9 o superior** ([python.org/downloads](https://www.python.org/downloads/); en Windows marca *"Add python.exe to PATH"* al instalar). Cada persona corre la app en su propia compu con su propia base de datos.
 
-**Paso 1 — Descargar.** En GitHub: botón verde **Code → Download ZIP** y descomprimir. O con git:
+**Paso 1 — Descargar** (recomendado con git, así luego actualizas con un comando):
 
 ```bash
-git clone <url-del-repositorio>
+git clone https://github.com/seby10/roles-pago-ec.git
+cd roles-pago-ec
 ```
+
+El repositorio es privado: acepta primero la invitación que llega a tu correo de GitHub. La primera vez git te pedirá iniciar sesión (en Windows se abre el navegador; en macOS/Linux puedes usar `gh auth login`). Para traer cambios nuevos: `git pull` dentro de la carpeta.
+
+¿Sin git? En la página del repo: botón verde **Code → Download ZIP** y descomprimir (para actualizar hay que volver a descargarlo).
 
 **Paso 2 — Abrir.**
 
@@ -23,7 +28,7 @@ git clone <url-del-repositorio>
 | Windows | Doble clic en **`iniciar.bat`** |
 | macOS / Linux | En una terminal dentro de la carpeta: `sh iniciar.sh` |
 
-La primera vez tarda ~30 s (crea un entorno `.venv` e instala Flask; necesita internet). Luego se abre solo el navegador en **http://127.0.0.1:5050**. Para cerrar, cierra la ventana de la terminal o presiona `Ctrl+C`.
+La primera vez tarda ~30 s (crea un entorno `.venv` e instala Flask y openpyxl; necesita internet). Luego se abre solo el navegador en **http://127.0.0.1:5050**. Para cerrar, cierra la ventana de la terminal o presiona `Ctrl+C`.
 
 **Manual (si prefieres):**
 
@@ -53,11 +58,11 @@ python calculos.py     # self-check: imprime "OK: ..." si los casos resueltos a 
 | # | Paso | Ruta | Qué ocurre |
 | --- | ------ | ------ | ------------ |
 | 1 | Empleados (CRUD) | `/empleados` | Alta, edición, activar/inactivar y eliminar. Incluye mensualizar décimos y fondos, gastos personales anuales y cargas familiares (0 a 20). Un empleado que ya aparece en un rol generado no se elimina: se inactiva. |
-| 2 | Nuevo rol | `/roles/nuevo` | Eliges año y mes. Por cada empleado activo hay una fila editable con días (30 por defecto), horas 50%, horas 100%, comisiones, anticipos de sueldo y préstamo quirografario IESS. Si el rol del periodo ya existe, sus novedades se precargan. |
+| 2 | Nuevo rol | `/roles/nuevo` | Eliges año y mes. Por cada empleado activo hay una fila editable con días (30 por defecto), horas 50%, horas 100%, comisiones, anticipos de sueldo y préstamo quirografario IESS. Si el rol del periodo ya existe, sus novedades se precargan. La columna **Neto estimado** se recalcula mientras escribes (`POST /roles/preview` usa el mismo `calculos.py`, sin guardar). `Enter` baja a la fila siguiente. |
 | 3 | Generar | `POST /roles/generar` | Por cada empleado activo llama a `calculos.calcular_rol()`, una función pura que no toca la base de datos. Valida días entre 1 y 30 y valores numéricos ≥ 0. |
 | 4 | Guardar | (mismo POST) | Dentro de una transacción: borra el rol previo del mismo periodo (si existe), guarda la cabecera y luego los detalles. Regenerar reemplaza el rol. |
-| 5 | Vista consolidada | `/roles/<id>` | Totales de ingresos, descuentos y neto por empleado. El costo empleador va en una tabla aparte (provisiones y aportes patronales) que no afecta el neto. |
-| 6 | Rol individual | `/roles/<id>/empleado/<det_id>` | Rol imprimible en A4 con firmas, fechas de pago informativas y la sección "¿Cómo se calculó este rol?" de 9 pasos. |
+| 5 | Vista consolidada | `/roles/<id>` | Totales de ingresos, descuentos y neto por empleado. El costo empleador va en una tabla aparte (provisiones y aportes patronales) que no afecta el neto. Filas clicables; en celular se muestra como tarjetas. Se imprime en A4 horizontal. **Exportar Excel** (`/roles/<id>/excel`) descarga un `.xlsx` con 4 hojas: Rol de pagos, Costo empleador, Planilla IESS y Transferencias (archivo para el banco), con totales como fórmulas `SUM`. |
+| 6 | Rol individual | `/roles/<id>/empleado/<det_id>` | Rol imprimible en A4 con firmas, fechas de pago informativas y la sección "¿Cómo se calculó este rol?" de 9 pasos. Botones ← / → (o flechas del teclado) para pasar al siguiente empleado. |
 
 El listado de roles está en `/`.
 
@@ -289,12 +294,14 @@ Si sus gastos personales fueran 0, la rebaja sería 0 y el IR mensual subiría a
 
 1. Mostrar la pestaña **Empleados** con los 4 ejemplos, su antigüedad y su estado.
 2. Crear un empleado nuevo y probar una cédula inválida: el formulario la rechaza.
-3. Generar el rol de octubre 2026 con horas extras y comisión para **María López** (10 h al 50%, comisión $ 200).
+3. En **Generar rol del mes** (octubre 2026), escribir 10 h al 50% y comisión $ 200 para **María López** mirando la columna *Neto estimado*: cambia al instante (con 20 h baja la proporción neta porque sube de tramo de IR). Luego **Calcular y generar rol**.
 4. Abrir el rol consolidado y explicar la barra de neto, descuentos y aportes/provisiones.
 5. Abrir el rol individual de María, recorrer "¿Cómo se calculó este rol?" y compararlo con la sección 6.1.
 6. Editar a María, marcar **mensualizar décimo tercero y cuarto** y regenerar el rol. El neto sube de $ 1.577,47 a $ 1.767,12 (suma el 13° y el 14°), y el costo empleador se mantiene en $ 2.425,50.
 7. **Jorge Castillo**: en el nuevo rol, poner 8 h al 100%. Con sus gastos personales de $ 8.000 y 2 cargas, la retención es $ 135,72. Editar sus gastos a 0 y regenerar: la retención sube a $ 255,72 (desaparece la rebaja de $ 1.440).
 8. **Carlos Pérez** (sueldo $ 650, décimos y fondos mensualizados): en su rol individual, 13°, 14° y fondos aparecen como "pagado en rol". Su neto es $ 737,06 y su costo empleador $ 904,55. Mostrar que IESS e IR se calculan solo sobre $ 650.
+9. **Exportar Excel** desde el consolidado: abrir la hoja *Planilla IESS* (lo que se paga al IESS) y *Transferencias* (lo que se paga al banco), y mostrar que los totales son fórmulas.
+10. Usar **Reiniciar demo** (pie de página) para dejarlo listo para el siguiente grupo.
 
 ---
 
@@ -304,10 +311,13 @@ Si sus gastos personales fueran 0, la rebaja sería 0 y el IR mensual subiría a
 roles_pago/
 ├── app.py            rutas Flask, esquema SQLite (versión 2), validaciones y guardado
 ├── calculos.py       motor de cálculo puro + self-check
+├── exportar.py       libro Excel (.xlsx) del rol con openpyxl + self-check
 ├── templates/        plantillas Jinja: base, roles, empleados, empleado_form,
 │                     rol_nuevo, rol_ver, rol_individual
-├── static/style.css  sistema visual propio "libro contable" (sin Bootstrap)
-└── roles.db          base SQLite, se crea sola al ejecutar app.py (borrarla = reiniciar)
+├── static/           style.css (sistema visual "libro contable") y favicon.svg
+├── iniciar.bat / iniciar.sh   arranque con doble clic (crea .venv e instala dependencias)
+├── requirements.txt  flask, openpyxl
+└── roles.db          base SQLite local, se crea sola (no se sube a git)
 ```
 
 ---

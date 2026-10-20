@@ -44,7 +44,7 @@
     <span class="hint">Valores en USD</span>
   </div>
   <div class="table-wrap">
-    <table class="ledger">
+    <table class="ledger stack">
       <thead>
         <tr>
           <th class="first">Periodo</th>
@@ -59,15 +59,15 @@
       </thead>
       <tbody>
       {% for r in roles %}
-        <tr>
+        <tr data-href="{{ url_for('rol_ver', id=r.id) }}">
           <td class="first"><a class="person" href="{{ url_for('rol_ver', id=r.id) }}">{{ MESES[r.mes] }} {{ r.anio }}</a></td>
-          <td class="n">{{ r.n_empleados }}</td>
-          <td class="n">{{ r.total_ingresos|cifra }}</td>
-          <td class="n">{{ r.total_descuentos|cifra }}</td>
-          <td class="n neto">{{ r.total_neto|cifra }}</td>
-          <td class="n costo">{{ r.total_costo|cifra }}</td>
-          <td>{{ r.generado_en }}</td>
-          <td style="text-align:right">
+          <td class="n" data-label="Empleados">{{ r.n_empleados }}</td>
+          <td class="n" data-label="Total ingresos">{{ r.total_ingresos|cifra }}</td>
+          <td class="n" data-label="Descuentos">{{ r.total_descuentos|cifra }}</td>
+          <td class="n neto" data-label="Neto">{{ r.total_neto|cifra }}</td>
+          <td class="n costo" data-label="Costo empleador">{{ r.total_costo|cifra }}</td>
+          <td data-label="Generado">{{ r.generado_en|fecha }}</td>
+          <td class="acciones" style="text-align:right">
             <a class="btn btn-sm" href="{{ url_for('rol_ver', id=r.id) }}">Ver</a>
             <form class="inline" method="post" action="{{ url_for('rol_eliminar', id=r.id) }}"
                   data-confirm="¿Eliminar el rol de {{ MESES[r.mes] }} {{ r.anio }}? Esta acción no se puede deshacer.">

@@ -17,7 +17,7 @@
 {% if empleados %}
 <section class="panel">
   <div class="table-wrap">
-    <table class="ledger">
+    <table class="ledger stack">
       <thead>
         <tr>
           <th class="first">Empleado</th>
@@ -31,21 +31,21 @@
       </thead>
       <tbody>
       {% for e in empleados %}
-        <tr{% if not e.activo %} style="opacity:.55"{% endif %}>
+        <tr data-href="{{ url_for('empleado_editar', id=e.id) }}"{% if not e.activo %} style="opacity:.55"{% endif %}>
           <td class="first">
             <a class="person" href="{{ url_for('empleado_editar', id=e.id) }}">{{ e.nombres }} {{ e.apellidos }}</a>
             <div class="sub" style="font-family:var(--mono)">{{ e.cedula }}</div>
           </td>
-          <td>{{ e.cargo }}<div class="sub">{{ e.tipo_contrato }}</div></td>
-          <td class="n">{{ e.sueldo|money }}{% if e.sueldo < P.sbu %} <span class="tag tag--warn">bajo SBU</span>{% endif %}</td>
-          <td>{{ e.fecha_ingreso }}<div class="sub">{{ e.antiguedad }}</div></td>
-          <td>
+          <td data-label="Cargo"><span>{{ e.cargo }}<div class="sub">{{ e.tipo_contrato }}</div></span></td>
+          <td class="n" data-label="Sueldo"><span>{{ e.sueldo|money }}{% if e.sueldo < P.sbu %} <span class="tag tag--warn">bajo SBU</span>{% endif %}</span></td>
+          <td data-label="Ingreso"><span>{{ e.fecha_ingreso|fecha }}<div class="sub">{{ e.antiguedad }}</div></span></td>
+          <td data-label="Beneficios"><span>
             {% if e.mensualiza_decimos %}<span class="tag tag--neto">13°/14° mensual</span>{% endif %}
             {% if e.mensualiza_fondos %}<span class="tag tag--neto">F. reserva mensual</span>{% else %}<span class="tag tag--off">F. reserva acumula</span>{% endif %}
             {% if e.gastos_personales > 0 %}<span class="tag tag--costo">Gastos pers. $ {{ e.gastos_personales|cifra }}</span>{% endif %}
-          </td>
-          <td>{% if e.activo %}<span class="tag tag--neto">Activo</span>{% else %}<span class="tag tag--off">Inactivo</span>{% endif %}</td>
-          <td style="text-align:right">
+          </span></td>
+          <td data-label="Estado">{% if e.activo %}<span class="tag tag--neto">Activo</span>{% else %}<span class="tag tag--off">Inactivo</span>{% endif %}</td>
+          <td class="acciones" style="text-align:right">
             <a class="btn btn-sm" href="{{ url_for('empleado_editar', id=e.id) }}">Editar</a>
             <form class="inline" method="post" action="{{ url_for('empleado_toggle', id=e.id) }}">
               <button class="btn btn-sm btn-ghost" type="submit">{{ 'Inactivar' if e.activo else 'Activar' }}</button>

@@ -11,7 +11,7 @@
   <link rel="icon" type="image/svg+xml" href="{{ url_for('static', filename='favicon.svg') }}">
   {% block head %}{% endblock %}
 </head>
-<body>
+<body class="{% block body_class %}{% endblock %}">
   {% set ep = request.endpoint or '' %}
   <header class="topbar no-print">
     <div class="wrap">
@@ -52,7 +52,25 @@
     // Confirmación para acciones destructivas: <form data-confirm="...">
     document.addEventListener('submit', function (ev) {
       var msg = ev.target.getAttribute('data-confirm');
-      if (msg && !confirm(msg)) ev.preventDefault();
+      if (msg && !confirm(msg)) { ev.preventDefault(); return; }
+      // <form data-loading="Calculando…">: evita el doble envío y muestra que está trabajando.
+      var cargando = ev.target.getAttribute('data-loading');
+      var btn = ev.submitter || ev.target.querySelector('[type=submit]');
+      if (cargando && btn) {
+        btn.setAttribute('aria-busy', 'true');
+        btn.textContent = cargando;
+        setTimeout(function () { btn.disabled = true; }, 0);  // después del envío, para no cancelarlo
+      }
+    });
+    // Filas clicables: <tr data-href="...">. Los enlaces, botones y campos dentro de la fila siguen funcionando.
+    document.addEventListener('click', function (ev) {
+      var tr = ev.target.closest('tr[data-href]');
+      if (!tr || ev.target.closest('a, button, input, select, form, label')) return;
+      if (ev.metaKey || ev.ctrlKey) window.open(tr.dataset.href); else location.href = tr.dataset.href;
+    });
+    // El navegador restaura la página desde caché al volver atrás: rehabilitar botones "Calculando…".
+    window.addEventListener('pageshow', function (ev) {
+      if (ev.persisted) location.reload();
     });
     // Cerrar mensajes con una salida corta (más rápida que la entrada).
     document.addEventListener('click', function (ev) {

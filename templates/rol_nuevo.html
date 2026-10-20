@@ -37,7 +37,7 @@
   </div>
 </section>
 {% else %}
-<form method="post" action="{{ url_for('rol_generar') }}">
+<form method="post" action="{{ url_for('rol_generar') }}" id="novedades" data-preview="{{ url_for('rol_preview') }}" data-loading="Calculando…">
   <input type="hidden" name="anio" value="{{ anio }}">
   <input type="hidden" name="mes" value="{{ mes }}">
   <section class="panel">
@@ -54,6 +54,7 @@
             <th class="group group--neto sep" colspan="2">Horas</th>
             <th class="group group--neto sep">Ingresos variables</th>
             <th class="group group--desc sep" colspan="2">Descuentos</th>
+            <th class="n sep" rowspan="2"><span class="live-dot" aria-hidden="true"></span>Neto estimado</th>
           </tr>
           <tr>
             <th class="n sep">Días</th>
@@ -67,7 +68,7 @@
         <tbody>
         {% for f in filas %}
           {% set nom = f.e.nombres ~ ' ' ~ f.e.apellidos %}
-          <tr>
+          <tr data-emp="{{ f.e.id }}">
             <td class="first">
               <span class="person">{{ nom }}</span>
               <div class="sub">{{ f.e.cargo }} · {{ f.e.sueldo|money }}</div>
@@ -84,19 +85,85 @@
                 name="ant_{{ f.e.id }}" value="{{ v(f.anticipos) }}" aria-label="Anticipos de {{ nom }}" onfocus="this.select()"></td>
             <td class="n"><input class="input input-sm num" style="width:92px" type="number" min="0" step="0.01"
                 name="pre_{{ f.e.id }}" value="{{ v(f.prestamos_iess) }}" aria-label="Préstamo IESS de {{ nom }}" onfocus="this.select()"></td>
+            <td class="n sep preview" aria-live="polite"><div class="neto-est">—</div><div class="sub"></div></td>
           </tr>
         {% endfor %}
         </tbody>
+        <tfoot>
+          <tr>
+            <td class="first" colspan="7">Totales estimados <span class="sub">· neto a pagar y costo para la empresa</span></td>
+            <td class="n sep preview" id="prev-total"><div class="neto-est">—</div><div class="sub"></div></td>
+          </tr>
+        </tfoot>
       </table>
     </div>
     <div class="panel-body">
       <div class="note"><p><b>Valor hora</b> = sueldo ÷ 240. <b>50%</b>: suplementarias diurnas (máx. 4 h/día, 12 h/semana). <b>100%</b>: sábados, domingos, feriados y suplementarias de 24:00 a 06:00. Comisiones y bonos aportan al IESS y pagan IR. Anticipos y préstamos quirografarios del IESS solo restan del neto.</p></div>
     </div>
     <div class="form-foot">
-      <p class="hint" style="margin:0 auto 0 0;align-self:center">Se procesarán {{ filas|length }} empleado{{ '' if filas|length == 1 else 's' }} activo{{ '' if filas|length == 1 else 's' }}</p>
+      <p class="hint" style="margin:0 auto 0 0;align-self:center">El neto estimado se recalcula mientras escribes (<kbd>Enter</kbd> baja a la siguiente fila). Se procesarán {{ filas|length }} empleado{{ '' if filas|length == 1 else 's' }} activo{{ '' if filas|length == 1 else 's' }}</p>
       <button class="btn btn-primary btn-lg" type="submit">Calcular y generar rol →</button>
     </div>
   </section>
 </form>
 {% endif %}
+{% endblock %}
+
+{% block scripts %}
+<script>
+// Vista previa en vivo: el servidor calcula con el MISMO calculos.py del rol definitivo (no se duplican fórmulas aquí).
+(function () {
+  var form = document.getElementById('novedades');
+  if (!form) return;
+  var fmt = function (n) {
+    var p = Math.abs(n).toFixed(2).split('.');
+    return (n < 0 ? '-' : '') + p[0].replace(/\B(?=(\d{3})+(?!\d))/g, '.') + ',' + p[1];
+  };
+  var cells = form.querySelectorAll('.preview');
+  var timer, pedido = 0;
+
+  function actualizar() {
+    var n = ++pedido;
+    cells.forEach(function (c) { c.classList.add('is-stale'); });
+    fetch(form.dataset.preview, { method: 'POST', body: new FormData(form) })
+      .then(function (r) { return r.json(); })
+      .then(function (datos) {
+        if (n !== pedido) return;               // llegó una respuesta vieja: se ignora
+        var neto = 0, costo = 0;
+        form.querySelectorAll('tr[data-emp]').forEach(function (tr) {
+          var c = tr.querySelector('.preview'), r = datos[tr.dataset.emp];
+          c.classList.remove('is-stale');
+          c.classList.toggle('is-error', !r);
+          if (!r) { c.firstChild.textContent = 'revisar'; c.lastChild.textContent = 'valor inválido'; return; }
+          neto += r.neto; costo += r.costo_total;
+          c.firstChild.textContent = fmt(r.neto);
+          c.lastChild.textContent = 'IR ' + fmt(r.ir) + ' · costo ' + fmt(r.costo_total);
+        });
+        var t = document.getElementById('prev-total');
+        t.classList.remove('is-stale');
+        t.firstChild.textContent = fmt(neto);
+        t.lastChild.textContent = 'costo ' + fmt(costo);
+      })
+      .catch(function () { cells.forEach(function (c) { c.classList.remove('is-stale'); }); });
+  }
+
+  form.addEventListener('input', function (ev) {
+    ev.target.classList.toggle('is-invalid', !ev.target.checkValidity());
+    clearTimeout(timer);
+    timer = setTimeout(actualizar, 180);
+  });
+
+  // Enter baja a la misma columna de la fila siguiente (como en una hoja de cálculo); Shift+Enter sube.
+  form.addEventListener('keydown', function (ev) {
+    if (ev.key !== 'Enter' || ev.target.tagName !== 'INPUT') return;
+    ev.preventDefault();
+    var td = ev.target.closest('td'), tr = td.parentElement, col = Array.prototype.indexOf.call(tr.children, td);
+    var destino = ev.shiftKey ? tr.previousElementSibling : tr.nextElementSibling;
+    var input = destino && destino.children[col].querySelector('input');
+    if (input) input.focus();
+  });
+
+  actualizar();
+})();
+</script>
 {% endblock %}

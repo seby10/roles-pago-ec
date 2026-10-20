@@ -1,5 +1,6 @@
 {% extends "base.html" %}
 {% block title %}Rol {{ MESES[cab.mes] }} {{ cab.anio }}{% endblock %}
+{% block body_class %}horizontal{% endblock %}
 {% block content %}
 {% set aportes = cab.total_costo - cab.total_ingresos %}
 {% set tot = cab.total_costo or 1 %}
@@ -9,11 +10,12 @@
   <div>
     <div class="eyebrow">Rol de pagos consolidado</div>
     <h1 class="title">{{ MESES[cab.mes] }} <em>{{ cab.anio }}</em></h1>
-    <p class="meta"><b>{{ cab.n_empleados }}</b> empleado{{ '' if cab.n_empleados == 1 else 's' }} · generado el {{ cab.generado_en }} · RUC {{ EMPRESA.ruc }}</p>
+    <p class="meta"><b>{{ cab.n_empleados }}</b> empleado{{ '' if cab.n_empleados == 1 else 's' }} · generado el {{ cab.generado_en|fecha }} · RUC {{ EMPRESA.ruc }}</p>
   </div>
   <div class="actions no-print">
     <a class="btn btn-ghost" href="{{ url_for('roles_lista') }}">← Roles</a>
     <a class="btn" href="{{ url_for('rol_nuevo', anio=cab.anio, mes=cab.mes) }}">Editar novedades</a>
+    <a class="btn" href="{{ url_for('rol_excel', id=cab.id) }}" download>Exportar Excel</a>
     <button class="btn btn-primary" type="button" onclick="window.print()">Imprimir</button>
   </div>
 </div>
@@ -82,7 +84,27 @@
   </div>
 </section>
 
-<section class="panel">
+<section class="cards" aria-label="Empleados">
+  {% for d in detalles %}
+  <a class="card-emp" href="{{ url_for('rol_individual', id=cab.id, det_id=d.id) }}">
+    <div class="top">
+      <div><span class="person">{{ d.nombre }}</span><div class="sub">{{ d.cargo }}{% if d.dias < 30 %} · {{ d.dias }} días{% endif %}</div></div>
+      <div class="neto-big">{{ d.neto|money }}</div>
+    </div>
+    <dl>
+      <div><dt>Ingresos</dt><dd>{{ d.total_ingresos|cifra }}</dd></div>
+      <div><dt>Descuentos</dt><dd style="color:var(--desc)">{{ d.total_descuentos|cifra }}</dd></div>
+      <div><dt>Costo empresa</dt><dd style="color:var(--costo)">{{ d.costo_total|cifra }}</dd></div>
+    </dl>
+    {% if d.avisos or d.total_no_gravado %}<div class="tags">
+      {% if d.total_no_gravado %}<span class="tag tag--neto">beneficios en rol {{ d.total_no_gravado|cifra }}</span>{% endif %}
+      {% if d.avisos %}<span class="tag tag--warn">{{ d.avisos }}</span>{% endif %}
+    </div>{% endif %}
+  </a>
+  {% endfor %}
+</section>
+
+<section class="panel hide-mobile">
   <div class="panel-head">
     <h2>Ingresos, descuentos y neto</h2>
     <span class="hint">Valores en USD · clic en un nombre para ver su rol individual</span>
@@ -104,7 +126,7 @@
       </thead>
       <tbody>
       {% for d in detalles %}
-        <tr>
+        <tr data-href="{{ url_for('rol_individual', id=cab.id, det_id=d.id) }}">
           <td class="first">
             <a class="person" href="{{ url_for('rol_individual', id=cab.id, det_id=d.id) }}">{{ d.nombre }}</a>
             {% if d.avisos %}<span class="tag tag--warn" title="{{ d.avisos }}">revisar</span>{% endif %}
@@ -142,7 +164,7 @@
   </div>
 </section>
 
-<section class="panel">
+<section class="panel hide-mobile">
   <div class="panel-head">
     <h2>Costo empleador</h2>
     <span class="hint">Valores en USD · provisiones y aportes no se descuentan al empleado</span>
@@ -164,7 +186,7 @@
       </thead>
       <tbody>
       {% for d in detalles %}
-        <tr>
+        <tr data-href="{{ url_for('rol_individual', id=cab.id, det_id=d.id) }}">
           <td class="first"><a class="person" href="{{ url_for('rol_individual', id=cab.id, det_id=d.id) }}">{{ d.nombre }}</a></td>
           <td class="n sep">{{ d.total_gravado|cifra }}</td>
           <td class="n sep">{% if d.mensualiza_decimos %}<span class="tag tag--neto" title="Se paga cada mes en el rol">en rol</span> {% endif %}{{ d.p13|cifra }}</td>

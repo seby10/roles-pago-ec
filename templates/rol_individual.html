@@ -11,7 +11,12 @@
     <p class="meta">{{ d.cargo }} · {{ MESES[cab.mes] }} {{ cab.anio }}</p>
   </div>
   <div class="actions">
-    <a class="btn btn-ghost" href="{{ url_for('rol_ver', id=cab.id) }}">← Consolidado</a>
+    <a class="btn btn-ghost" href="{{ url_for('rol_ver', id=cab.id) }}">Consolidado</a>
+    <nav class="pager" aria-label="Otros empleados de este rol">
+      <a class="btn" id="prev" {% if nav.anterior %}href="{{ url_for('rol_individual', id=cab.id, det_id=nav.anterior.id) }}" title="{{ nav.anterior.nombre }} (←)"{% else %}aria-disabled="true"{% endif %}>←</a>
+      <span class="count">{{ nav.pos }} de {{ nav.total }}</span>
+      <a class="btn" id="next" {% if nav.siguiente %}href="{{ url_for('rol_individual', id=cab.id, det_id=nav.siguiente.id) }}" title="{{ nav.siguiente.nombre }} (→)"{% else %}aria-disabled="true"{% endif %}>→</a>
+    </nav>
     <button class="btn btn-primary" type="button" onclick="window.print()">Imprimir</button>
   </div>
 </div>
@@ -131,4 +136,15 @@
     <div class="firma">Recibí conforme<span>{{ d.nombre }} · C.I. {{ d.cedula }}</span></div>
   </div>
 </article>
+{% endblock %}
+
+{% block scripts %}
+<script>
+  // Flechas del teclado para pasar de un empleado a otro (sin animación: es una acción repetida).
+  document.addEventListener('keydown', function (ev) {
+    if (ev.target.closest('input, textarea, select') || ev.metaKey || ev.ctrlKey || ev.altKey) return;
+    var a = document.getElementById(ev.key === 'ArrowLeft' ? 'prev' : ev.key === 'ArrowRight' ? 'next' : '');
+    if (a && a.href) location.href = a.href;
+  });
+</script>
 {% endblock %}

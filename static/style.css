@@ -342,10 +342,50 @@ table.ledger { width: 100%; border-collapse: separate; border-spacing: 0; font-s
 .site-footer { border-top: 1px solid var(--line); color: var(--muted); font-size: 12px; }
 .site-footer .wrap { display: flex; flex-wrap: wrap; justify-content: space-between; gap: 8px; padding-top: 16px; padding-bottom: 16px; }
 
+/* ---------------------------------------------------------------- inputs numéricos sin flechitas */
+.input.num { -moz-appearance: textfield; appearance: textfield; }
+.input.num::-webkit-outer-spin-button, .input.num::-webkit-inner-spin-button { -webkit-appearance: none; margin: 0; }
+.input.is-invalid { border-color: var(--danger); box-shadow: 0 0 0 3px rgba(179, 38, 30, .12); }
+
+/* ---------------------------------------------------------------- filas clicables */
+tr[data-href] { cursor: pointer; }
+
+/* ---------------------------------------------------------------- vista previa en vivo (novedades) */
+.ledger .preview { min-width: 128px; }
+.preview .neto-est { font-weight: 600; color: var(--neto); }
+.preview .sub { font-family: var(--figures); }
+.preview.is-stale .neto-est, .preview.is-stale .sub { opacity: .45; transition: opacity 120ms ease; }
+.preview.is-error .neto-est { color: var(--danger); font-weight: 500; }
+.live-dot { width: 6px; height: 6px; border-radius: 50%; background: var(--neto); display: inline-block; margin-right: 6px; vertical-align: middle; }
+
+/* botón mientras se envía */
+.btn[aria-busy="true"] { opacity: .7; cursor: progress; }
+
+/* ---------------------------------------------------------------- navegación entre roles individuales */
+.pager { display: flex; align-items: center; gap: 4px; }
+.pager .count { color: var(--muted); font-size: 12.5px; padding: 0 6px; font-variant-numeric: tabular-nums; }
+.btn[aria-disabled="true"] { opacity: .35; pointer-events: none; }
+kbd { font: 500 11px var(--sans); border: 1px solid var(--line-strong); border-bottom-width: 2px; border-radius: 4px; padding: 0 4px; color: var(--muted); background: var(--surface); }
+
+/* ---------------------------------------------------------------- tarjetas del consolidado (móvil) */
+.cards { display: none; }
+.card-emp {
+  display: block; text-decoration: none; background: var(--surface); border: 1px solid var(--line);
+  border-radius: var(--radius); box-shadow: var(--shadow); padding: 16px; margin-bottom: 10px;
+  transition: transform 160ms var(--ease-out);
+}
+.card-emp:active { transform: scale(0.98); }
+.card-emp .top { display: flex; justify-content: space-between; align-items: baseline; gap: 12px; }
+.card-emp .neto-big { font: 600 20px/1.2 var(--figures); color: var(--neto); letter-spacing: -0.02em; white-space: nowrap; }
+.card-emp dl { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; margin: 12px 0 0; padding-top: 12px; border-top: 1px solid var(--line); }
+.card-emp dt { font-size: 11.5px; color: var(--muted); }
+.card-emp dd { margin: 2px 0 0; font-weight: 500; font-variant-numeric: tabular-nums; }
+.card-emp .tags { margin-top: 10px; display: flex; flex-wrap: wrap; gap: 4px; }
+
 .only-mobile { display: none; }
 
 /* ---------------------------------------------------------------- responsive */
-@media (max-width: 760px) {
+@media screen and (max-width: 760px) {
   .wrap { padding: 0 16px; }
   main.wrap { padding-top: 24px; }
   .brand-org { display: none; }
@@ -365,11 +405,25 @@ table.ledger { width: 100%; border-collapse: separate; border-spacing: 0; font-s
   .doc-costo .line { flex-wrap: wrap; row-gap: 2px; }
   .doc-costo .line > span:last-child { margin-left: auto; text-align: right; }
   .only-mobile { display: initial; }
+  .hide-mobile { display: none; }
+  .cards { display: block; }
+
+  /* Tablas .stack: en móvil cada fila se vuelve una tarjeta con etiqueta:valor (data-label). */
+  table.stack, .stack tbody, .stack tr, .stack td { display: block; width: 100%; }
+  .stack thead { display: none; }
+  .stack tbody tr { padding: 12px 16px; border-bottom: 1px solid var(--line); }
+  .stack tbody tr:last-child { border-bottom: 0; }
+  .stack td { border: 0; padding: 3px 0; white-space: normal; display: flex; justify-content: space-between; gap: 12px; text-align: right; }
+  .stack td.first { position: static; display: block; text-align: left; padding-bottom: 6px; min-width: 0; }
+  .stack td[data-label]::before { content: attr(data-label); color: var(--muted); font: 400 12.5px var(--sans); text-align: left; }
+  .stack td.acciones { justify-content: flex-start; flex-wrap: wrap; gap: 6px; padding-top: 8px; }
+  .stack td.acciones::before { display: none; }
 }
 
 /* ---------------------------------------------------------------- impresión */
 @media print {
   @page { size: A4; margin: 14mm; }
+  @page horizontal { size: A4 landscape; margin: 10mm; }
   body { background: #fff; font-size: 10.5pt; }
   .topbar, .site-footer, .no-print, .flash { display: none !important; }
   main.wrap { padding: 0; max-width: none; }
@@ -378,6 +432,15 @@ table.ledger { width: 100%; border-collapse: separate; border-spacing: 0; font-s
   .doc-cols, .doc-costo .grid { grid-template-columns: 1fr 1fr; }
   .doc-neto, .bar span, .ledger thead th, .ledger tfoot td, .tag { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
   .ledger .first { position: static; }
+  /* Tablas completas en papel: sin scroll, más compactas y totales solo al final (no en cada página). */
+  .table-wrap { overflow: visible; }
+  .ledger { font-size: 8.5pt; }
+  .ledger th, .ledger td { padding: 5px 6px; }
+  .ledger td.first { min-width: 0; }
+  .ledger thead th { position: static; }
+  .ledger tfoot { display: table-row-group; }
+  .panel-head .hint { display: none; }
+  body.horizontal main { page: horizontal; }
   .line, tr, .doc-neto { break-inside: avoid; }
   a { text-decoration: none; }
 }

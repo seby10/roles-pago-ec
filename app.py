@@ -4,16 +4,18 @@ Ejecutar:  iniciar.bat (Windows) / ./iniciar.sh (macOS, Linux)
       o:   pip install -r requirements.txt  &&  python app.py   →  http://127.0.0.1:5050
 La base roles.db se crea sola con empleados de ejemplo; "Reiniciar demo" (pie de página) la vuelve al inicio.
 """
+import io
 import os
 import sqlite3
 from datetime import date
 from decimal import Decimal, InvalidOperation
 from pathlib import Path
 
-from flask import Flask, flash, g, redirect, render_template, request, url_for
+from flask import Flask, flash, g, redirect, render_template, request, send_file, url_for
 from markupsafe import Markup
 
 import calculos
+import exportar
 
 DB_PATH = Path(__file__).with_name("roles.db")
 EMPRESA = {"nombre": "FERIAUTO SAS", "ruc": "1790000000001", "region": "Sierra"}  # ficticia
@@ -142,6 +144,13 @@ def money(valor):
 def dash(valor):
     """Cifra para tablas; un cero se muestra como '—' atenuado (convención de libro contable)."""
     return cifra(valor) if round(float(valor or 0), 2) else Markup('<span class="zero">—</span>')
+
+
+@app.template_filter("fecha")
+def fecha(iso):
+    """'2026-10-19' → '19 oct 2026'."""
+    d = date.fromisoformat(iso)
+    return f"{d.day} {MESES[d.month][:3].lower()} {d.year}"
 
 
 @app.context_processor
@@ -300,6 +309,32 @@ def rol_nuevo():
                            existe=bool(cab), filas=lista)
 
 
+def novedades_de(f, e):
+    """Lee del formulario las novedades de un empleado (inputs dias_<id>, h50_<id>, ...)."""
+    i = e["id"]
+    dias = int(numero(f.get(f"dias_{i}"), "30"))
+    if not 1 <= dias <= 30:
+        raise ValueError(f"días de {e['nombres']}")
+    return dict(dias=dias, h50=numero(f.get(f"h50_{i}")), h100=numero(f.get(f"h100_{i}")),
+                comisiones=numero(f.get(f"com_{i}")), anticipos=numero(f.get(f"ant_{i}")),
+                prestamos_iess=numero(f.get(f"pre_{i}")))
+
+
+@app.post("/roles/preview")
+def rol_preview():
+    """Vista previa en vivo: mismo cálculo que el rol definitivo, sin guardar nada."""
+    f = request.form
+    anio, mes = int(f["anio"]), int(f["mes"])
+    salida = {}
+    for e in filas("SELECT * FROM empleados WHERE activo = 1"):
+        try:
+            r = calculos.calcular_rol(e, novedades_de(f, e), anio, mes)
+            salida[e["id"]] = {k: r[k] for k in ("total_ingresos", "total_descuentos", "ir", "neto", "costo_total")}
+        except ValueError:
+            salida[e["id"]] = None  # fila con un valor inválido: la página la marca
+    return salida
+
+
 @app.post("/roles/generar")
 def rol_generar():
     f = request.form
@@ -309,14 +344,7 @@ def rol_generar():
     detalles = []
     try:
         for e in empleados:
-            i = e["id"]
-            dias = int(numero(f.get(f"dias_{i}"), "30"))
-            if not 1 <= dias <= 30:
-                raise ValueError(f"días de {e['nombres']}")
-            novedades = dict(dias=dias, h50=numero(f.get(f"h50_{i}")), h100=numero(f.get(f"h100_{i}")),
-                             comisiones=numero(f.get(f"com_{i}")), anticipos=numero(f.get(f"ant_{i}")),
-                             prestamos_iess=numero(f.get(f"pre_{i}")))
-            detalles.append({"empleado_id": i, **calculos.calcular_rol(e, novedades, anio, mes)})
+            detalles.append({"empleado_id": e["id"], **calculos.calcular_rol(e, novedades_de(f, e), anio, mes)})
     except ValueError as err:
         flash(f"Revisa las novedades: valor inválido ({err}). Usa números ≥ 0 y días entre 1 y 30.", "danger")
         return redirect(url_for("rol_nuevo", anio=anio, mes=mes))
@@ -365,7 +393,28 @@ def rol_individual(id, det_id):
     if not (cab and d):
         flash("Rol individual no encontrado.", "danger")
         return redirect(url_for("roles_lista"))
-    return render_template("rol_individual.html", cab=cab[0], d=d[0])
+    # anterior / siguiente en el mismo orden que el consolidado
+    orden = filas("SELECT id, nombre FROM roles_detalle WHERE rol_id = ? ORDER BY nombre", (id,))
+    pos = next(i for i, o in enumerate(orden) if o["id"] == det_id)
+    nav = dict(pos=pos + 1, total=len(orden),
+               anterior=orden[pos - 1] if pos > 0 else None,
+               siguiente=orden[pos + 1] if pos + 1 < len(orden) else None)
+    return render_template("rol_individual.html", cab=cab[0], d=d[0], nav=nav)
+
+
+@app.get("/roles/<int:id>/excel")
+def rol_excel(id):
+    """Libro .xlsx con 4 hojas: rol, costo empleador, planilla IESS y transferencias bancarias."""
+    cab = filas("SELECT * FROM roles_cabecera WHERE id = ?", (id,))
+    if not cab:
+        flash("Rol no encontrado.", "danger")
+        return redirect(url_for("roles_lista"))
+    cab = cab[0]
+    detalles = filas("SELECT * FROM roles_detalle WHERE rol_id = ? ORDER BY nombre", (id,))
+    contenido = exportar.libro_rol(cab, detalles, EMPRESA, MESES[cab["mes"]])
+    nombre = f"rol_{cab['anio']}_{cab['mes']:02d}_{MESES[cab['mes']].lower()}.xlsx"
+    return send_file(io.BytesIO(contenido), as_attachment=True, download_name=nombre,
+                     mimetype="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")
 
 
 @app.post("/roles/<int:id>/eliminar")
