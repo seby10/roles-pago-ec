@@ -81,7 +81,7 @@ Se ejecuta con un solo comando: `python app.py`.
 
 | Tabla | Campos clave | Rol |
 | ------- | -------------- | ----- |
-| `empleados` | `cedula` (UNIQUE), `nombres`, `apellidos`, `cargo`, `sueldo`, `fecha_ingreso`, `tipo_contrato`, `activo`, `mensualiza_decimos` (0 por defecto), `mensualiza_fondos` (1 por defecto), `gastos_personales`, `cargas`, `departamento`, `reporta_a` (FK a `empleados.id`; NULL = máxima autoridad), `funcion`, `estructura` (código de la tabla sectorial: A1, B1, B2 o E2; vacío si no aplica) | Maestro de empleados y organigrama. `reporta_a` define las líneas de autoridad. |
+| `empleados` | `cedula` (UNIQUE), `nombres`, `apellidos`, `cargo`, `sueldo`, `fecha_ingreso`, `tipo_contrato`, `activo`, `mensualiza_decimos` (0 por defecto), `mensualiza_fondos` (1 por defecto), `gastos_personales`, `cargas`, `departamento`, `reporta_a` (FK a `empleados.id`; NULL = máxima autoridad), `funcion`, `estructura` (código de la tabla sectorial: A1, B1, B2, C1, C3, D1 o E2; vacío si no aplica) | Maestro de empleados y organigrama. `reporta_a` define las líneas de autoridad. |
 | `roles_cabecera` | `anio`, `mes` (**UNIQUE**), `generado_en`, `n_empleados`, `total_ingresos`, `total_descuentos`, `total_neto`, `total_costo`, `total_iess`, `total_ir` | Un registro por periodo con los totales. `total_iess` = aporte personal + patronal + IECE/SECAP (lo que se transfiere al IESS). |
 | `roles_detalle` | `rol_id` (FK, `ON DELETE CASCADE`), `empleado_id` (FK), **snapshot** de `nombre`, `cedula`, `cargo`, `sueldo`; novedades (`dias`, `h50`, `h100`, `comisiones`, `anticipos`, `prestamos_iess`); resultados (`total_gravado`, `iess_personal`, `rebaja_gp`, `ir`, `neto`, `costo_total`, etc.) | Una fila por empleado y periodo. |
 
@@ -89,7 +89,7 @@ Se ejecuta con un solo comando: `python app.py`.
 
 **Por qué `UNIQUE(anio, mes)`:** solo puede existir un rol por periodo. Regenerar borra la cabecera anterior (el detalle cae en cascada) en lugar de duplicar datos.
 
-**Versión del esquema:** `PRAGMA user_version` guarda `SCHEMA_VERSION` (hoy 3; la versión 3 agrega las columnas de organización a `empleados`). Si al arrancar la base tiene otra versión, se renombra como `roles_v<N>_respaldo.db` y se crea una nueva con los 4 socios de FERIAUTO. Nada se borra en silencio: la base de la versión 2 quedó como `roles_v2_respaldo.db`.
+**Versión del esquema:** `PRAGMA user_version` guarda `SCHEMA_VERSION` (hoy 4). La versión 3 agregó las columnas de organización a `empleados`; la 4 solo cambió la semilla, que ahora trae 5 personas (los 4 socios de FERIAUTO y el Programador Junior). Si al arrancar la base tiene otra versión, se renombra como `roles_v<N>_respaldo.db` y se crea una nueva con la semilla. Nada se borra en silencio: al pasar de la 3 a la 4, la base anterior quedó como `roles_v3_respaldo.db`.
 
 ---
 
@@ -190,16 +190,19 @@ El rol individual muestra cuándo se paga cada beneficio: 13° hasta el 24 de di
 
 ### 5.9 Salario mínimo sectorial
 
-Además del SBU, cada cargo tiene un mínimo según su **estructura ocupacional**. Fuente: comisión sectorial 12 "Tecnología: hardware y software", rama 1 "Informática y actividades conexas" (CIIU J62). Para 2026 no se emitió tabla nueva: según el Ministerio del Trabajo rige la tabla 2025 (Acuerdo MDT-2024-301) y los valores menores al SBU suben a $ 482. Un cargo no contemplado no puede ganar menos que el menor valor de su rama (art. 5 del acuerdo).
+Además del SBU, cada cargo tiene un mínimo según su **estructura ocupacional**. Fuente: R.O. 2.º Suplemento 708 (20-dic-2024), Anexo 1, págs. 64-65; comisión sectorial 12 "Tecnología: hardware y software", rama 1 "Informática y actividades conexas" (CIIU J62). Para 2026 no se emitió tabla nueva: según el Ministerio del Trabajo rige la tabla 2025 (Acuerdo MDT-2024-301) y los valores menores al SBU suben a $ 482. Un cargo no contemplado no puede ganar menos que el menor valor de su rama (art. 5 del acuerdo).
 
 | Estructura | Cargo de referencia | Mínimo mensual ($) |
 | --- | --- | ---: |
 | A1 | Director / jefe de área | 507,37 |
-| B1 | Supervisor de sistemas, desarrollo y proyectos | 506,67 |
-| B2 | Supervisor de diseño de software / administrador de BD | 505,97 |
-| E2 | Cargo no contemplado (mínimo de la rama) | 493,29 |
+| B1 | Supervisor de sistemas, desarrollo, tecnología y proyectos | 506,67 |
+| B2 | Analista de calidad de software / administrador de BD | 505,97 |
+| C1 | Analista / programador semi senior de software | 504,56 |
+| C3 | Programador junior de software | 500,80 |
+| D1 | Técnico de help desk | 498,93 |
+| E2 | Menor valor de la rama (cargo no contemplado) | 493,29 |
 
-Si el sueldo de un empleado es menor al mínimo de su estructura, el rol guarda un aviso (no bloquea la generación), y la tabla de remuneraciones muestra el mínimo junto a cada cargo. Los cuatro socios de FERIAUTO están en A1, con sueldos de arranque sobre ese mínimo (sección 7).
+Si el sueldo de un empleado es menor al mínimo de su estructura, el rol guarda un aviso (no bloquea la generación), y la tabla de remuneraciones muestra el mínimo junto a cada cargo. Los cuatro socios están en A1 y el Programador Junior en C3 (mínimo $ 500,80; sueldo $ 510). Todos cobran sobre el mínimo de su estructura (sección 7).
 
 ---
 
@@ -303,7 +306,7 @@ Los décimos están acumulados, así que no suman al neto. Si se mensualizaran, 
 | Decimal con redondeo half-up por línea | Evita errores de punto flotante y el redondeo bancario de `round()`. Los valores se guardan como float en SQLite al final. |
 | Cédula: módulo 10, provincia 01-24 o 30, tercer dígito menor a 6 | Valida el formato. No consulta el Registro Civil. |
 | Avisos: sueldo menor al SBU o al mínimo sectorial de su estructura, más de 48 h al 50% al mes, neto negativo | Son advertencias que se guardan en el rol. No bloquean la generación. |
-| Sueldos de arranque sobre el mínimo A1 y con jerarquía (Gerente General > directores) | El mercado paga unos 1.200–1.800 a directores (Paylab y Jobint, abr-2026), pero el contrato con el GAD ($ 3.800) no lo cubre. Subir a esos montos deja el resultado negativo (sección 8, paso 7). |
+| Sueldos de arranque sobre el mínimo de su estructura y con jerarquía (Gerente General > directores > programador junior) | El mercado paga unos 1.200–1.800 a directores (Paylab y Jobint, abr-2026), pero el contrato con el GAD ($ 4.500) no lo cubre. Subir a esos montos deja el resultado negativo (sección 8, paso 7). |
 | El tipo de contrato es informativo | No cambia ningún cálculo. |
 | Fechas de pago solo informativas | No cambian ningún monto (sección 5.8). |
 | Sin login, sin PDF y sin cierre o aprobación de roles | Es una demo de un solo usuario. Para imprimir se usa el navegador. |
@@ -312,11 +315,11 @@ Los décimos están acumulados, así que no suman al neto. Si se mensualizaran, 
 
 ## 8. Guion sugerido para la demo (PEA 3, ~6 min)
 
-1. **Empleados:** los 4 directores de FERIAUTO, con su departamento y su jefe inmediato.
-2. **Organigrama** (`/organigrama`): explicar las líneas de autoridad (desde "reporta a") y la función de cada cargo.
-3. **Tabla de remuneraciones:** recorrer cada rubro (aportes, 13.º, 14.º, vacaciones, fondos y costo) y explicar por qué el sueldo supera el mínimo A1 de $ 507,37.
-4. **¿Es sostenible?:** mostrar el margen de $ 441,79 (11,6 %) y cómo los fondos desde el mes 13 lo bajan a $ 263,53.
-5. **Rol de octubre 2026:** generarlo y abrir el rol individual de **Sebastián Constante**. Revisar "¿Cómo se calculó?" y compararlo con la sección 6.2.
+1. **Empleados:** 5 en total: los 4 socios de FERIAUTO y el Programador Junior Andrés Villacís (contratado, no socio; nombre ficticio), con su departamento y su jefe inmediato.
+2. **Organigrama** (`/organigrama`): explicar las líneas de autoridad (desde "reporta a") y la función de cada cargo. Tiene 3 niveles: Gerente General, Director de Tecnología (Pablo Montero) y Programador Junior, que le reporta a él.
+3. **Tabla de remuneraciones:** recorrer cada rubro (aportes, 13.º, 14.º, vacaciones, fondos y costo) y explicar por qué cada sueldo supera el mínimo de su estructura (A1: $ 507,37; C3 del programador: $ 500,80). Totales de los 5 trabajadores: remuneraciones $ 2.650,00; aporte personal $ 250,45; patronal $ 322,00; 13.º $ 220,84; 14.º $ 200,85; vacaciones $ 110,41; costo $ 3.504,10. El Programador Junior tiene costo $ 675,89 y neto $ 461,80.
+4. **¿Es sostenible?:** con el contrato de $ 4.500, el costo del personal ($ 3.504,10, 77,9 %) más otros costos ($ 530) deja un margen de $ 465,90 (10,4 %). Desde el mes 13, los fondos de reserva (+$ 220,74) lo bajan a $ 245,16 (5,4 %). El punto de equilibrio es $ 4.034,10.
+5. **Rol de octubre 2026:** generarlo (neto total $ 2.399,55; costo $ 3.504,10) y abrir el rol individual de **Sebastián Constante**. Revisar "¿Cómo se calculó?" y compararlo con la sección 6.2.
 6. **Excel de la tabla** (*Exportar Excel* en el organigrama): cambiar un sueldo en Excel y mostrar cómo se recalcula todo.
 7. **Sueldos de mercado en vivo:** editar a un director y subir su sueldo a 1.200 (p. ej.), luego recargar el organigrama: el margen de "¿Es sostenible?" se vuelve negativo.
 8. **Reiniciar demo** (pie de página) para dejarlo listo para el siguiente grupo.
@@ -327,7 +330,7 @@ Los décimos están acumulados, así que no suman al neto. Si se mensualizaran, 
 
 ``` text
 roles_pago/
-├── app.py            rutas Flask, esquema SQLite (versión 3), validaciones, guardado y organigrama
+├── app.py            rutas Flask, esquema SQLite (versión 4), validaciones, guardado y organigrama
 ├── calculos.py       motor de cálculo puro, tabla sectorial y self-check
 ├── exportar.py       libro Excel (.xlsx) del rol y de la tabla de remuneraciones con openpyxl + self-check
 ├── templates/        plantillas Jinja: base, roles, empleados, empleado_form,
@@ -352,7 +355,7 @@ Las reglas se contrastaron con prensa y calculadoras ecuatorianas: tabla de IR 2
   - <https://www.ecija.com/actualidad-insights/sri-publica-nuevas-tablas-para-liquidar-el-impuesto-a-la-renta-2026/>
   - <https://nmslaw.com.ec/blog/2026/01/05/tablas-impuesto-renta-2026-ecuador/>
 - SBU 2026 de $ 482: <https://www.vistazo.com/2025-12-15-salario-basico-usd-482-2026-ecuador-incremento-dolares-IC10565269>
-- Salarios mínimos sectoriales (comisión 12, rama 1, CIIU J62), Acuerdo Ministerial MDT-2024-301. Para 2026 no se emitió tabla nueva: según el Ministerio del Trabajo rige la de 2025.
+- Salarios mínimos sectoriales (comisión 12, rama 1, CIIU J62), R.O. 2.º Suplemento 708 (20-dic-2024), Anexo 1, págs. 64-65, y Acuerdo Ministerial MDT-2024-301. Para 2026 no se emitió tabla nueva: según el Ministerio del Trabajo rige la de 2025.
   - <https://www.trabajo.gob.ec/wp-content/uploads/2024/12/ACUERDO-MINISTERIAL-NRO.-MDT-2024-301-signed.pdf>
 - Mercado de directores (referencia de 1.200 a 1.800 dólares): Paylab y Jobint, abril de 2026.
 - Aportes IESS (9,45% / 11,15%) e IECE/SECAP 1%: <https://runahr.com/ec/recursos/salario/calculadora-de-salario/>

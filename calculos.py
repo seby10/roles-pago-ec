@@ -56,11 +56,14 @@ CANASTAS_POR_CARGAS = {0: 7, 1: 9, 2: 11, 3: 14, 4: 17, 5: 20}   # 5 o más carg
 # tabla 2025 (Acuerdo MDT-2024-301) y los valores menores al SBU suben a $482.
 # Un cargo no contemplado no puede ganar menos que el menor valor de su rama (art. 5 del acuerdo).
 # código → (descripción, mínimo mensual)
-ESCALA_SECTORIAL_2026 = {
+ESCALA_SECTORIAL_2026 = {  # R.O. 2.º Supl. 708 (20-dic-2024), Anexo 1, págs. 64-65
     "A1": ("A1 · Director / jefe de área", Decimal("507.37")),
-    "B1": ("B1 · Supervisor de sistemas, desarrollo y proyectos", Decimal("506.67")),
-    "B2": ("B2 · Supervisor de diseño de software / administrador de BD", Decimal("505.97")),
-    "E2": ("E2 · Cargo no contemplado (mínimo de la rama)", Decimal("493.29")),
+    "B1": ("B1 · Supervisor de sistemas, desarrollo, tecnología y proyectos", Decimal("506.67")),
+    "B2": ("B2 · Analista de calidad de software / administrador de BD", Decimal("505.97")),
+    "C1": ("C1 · Analista / programador semi senior de software", Decimal("504.56")),
+    "C3": ("C3 · Programador junior de software", Decimal("500.80")),
+    "D1": ("D1 · Técnico de help desk", Decimal("498.93")),
+    "E2": ("E2 · Menor valor de la rama (cargo no contemplado)", Decimal("493.29")),
 }
 
 

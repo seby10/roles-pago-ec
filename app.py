@@ -24,7 +24,7 @@ DB_PATH = Path(__file__).with_name("roles.db")
 EMPRESA = {  # datos simulados del emprendimiento (proyecto académico)
     "nombre": "FERIAUTO S.A.S.", "ruc": "1850001234001", "region": "Sierra", "regimen": "Código del Trabajo",
     "cliente": "GAD Municipalidad de Ambato",
-    "ingreso_mensual": 3800,  # contrato B2G con el GAD (Canvas y dossier)
+    "ingreso_mensual": 4500,  # contrato B2G simulado con el GAD: desarrollo, mantenimiento y soporte de la plataforma
     "otros_costos": 530,      # costos fijos 430 + variables 100 (Taller 05)
 }
 DEPARTAMENTOS = ["Gerencia General", "Tecnología", "Finanzas", "Marketing", "Operaciones"]
@@ -89,7 +89,7 @@ CREATE TABLE IF NOT EXISTS roles_detalle (
 );
 """
 
-SCHEMA_VERSION = 3  # súbelo si cambias SCHEMA: la base vieja se respalda y se crea una nueva
+SCHEMA_VERSION = 4  # súbelo si cambias SCHEMA: la base vieja se respalda y se crea una nueva
 
 # Equipo de FERIAUTO: los 4 socios fundadores, contratados bajo el Código del Trabajo desde el inicio
 # de actividades (01-09-2026). Sueldos de arranque: sobre el mínimo sectorial A1 ($507,37) y con jerarquía
@@ -110,6 +110,10 @@ SEMILLA = [
     ("1309876546", "Jhanina", "Conterón", "Directora de Marketing", 530, "2026-09-01", "Indefinido", 0, 1, 0, 0,
      "Marketing", 1,
      "Posiciona la marca, gestiona la relación con comerciantes de la feria y la adopción de la app.", "A1"),
+    # Primer empleado contratado (no socio, nombre ficticio): muestra otra estructura ocupacional y un 3.er nivel.
+    ("1721345674", "Andrés", "Villacís", "Programador Junior", 510, "2026-10-01", "Indefinido", 0, 1, 0, 0,
+     "Tecnología", 2,
+     "Desarrolla y prueba módulos de la app y da soporte a los usuarios de la feria.", "C3"),
 ]
 CAMPOS_EMPLEADO = ("cedula", "nombres", "apellidos", "cargo", "sueldo", "fecha_ingreso", "tipo_contrato",
                    "mensualiza_decimos", "mensualiza_fondos", "gastos_personales", "cargas",
