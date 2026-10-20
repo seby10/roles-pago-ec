@@ -338,6 +338,52 @@ table.ledger { width: 100%; border-collapse: separate; border-spacing: 0; font-s
 .steps .how b { color: var(--ink); }
 .steps .why { grid-column: 2; color: var(--muted); font-size: 12.5px; }
 
+/* ---------------------------------------------------------------- organigrama (árbol con líneas de autoridad) */
+.org-wrap { overflow-x: auto; padding: 28px 20px 32px; }
+.org, .org ul { list-style: none; margin: 0; padding: 0; display: flex; justify-content: center; position: relative; }
+.org ul { padding-top: 24px; }
+.org li { position: relative; padding: 24px 10px 0; display: flex; flex-direction: column; align-items: center; }
+.org > li { padding-top: 0; }
+/* tramos horizontales que unen a los hermanos */
+.org li::before, .org li::after {
+  content: ""; position: absolute; top: 0; right: 50%; width: 50%; height: 24px; border-top: 1px solid var(--line-strong);
+}
+.org li::after { right: auto; left: 50%; border-left: 1px solid var(--line-strong); }
+.org li:only-child::before { display: none; }
+.org li:only-child::after { width: 0; border-top: 0; border-radius: 0; }   /* hijo único: línea recta */
+.org > li::before, .org > li::after { display: none; }                       /* la raíz no cuelga de nadie */
+.org li:first-child::before, .org li:last-child::after { border: 0; }
+.org li:last-child::before { border-right: 1px solid var(--line-strong); border-radius: 0 8px 0 0; }
+.org li:first-child::after { border-radius: 8px 0 0 0; }
+/* tramo vertical que baja desde el jefe */
+.org ul::before { content: ""; position: absolute; top: 0; left: 50%; height: 24px; border-left: 1px solid var(--line-strong); }
+.org-node {
+  display: flex; flex-direction: column; gap: 2px; width: 220px; padding: 14px 16px; text-align: left; text-decoration: none;
+  background: var(--surface); border: 1px solid var(--line); border-top: 3px solid var(--costo); border-radius: var(--radius-sm);
+  box-shadow: var(--shadow); transition: transform 160ms var(--ease-out), border-color 150ms ease;
+}
+.org-node--top { border-top-color: var(--ink); width: 240px; }
+.org-node:active { transform: scale(0.98); }
+@media (hover: hover) and (pointer: fine) { .org-node:hover { border-color: var(--line-strong); } }
+.org-dep { font-size: 10.5px; font-weight: 600; letter-spacing: .08em; text-transform: uppercase; color: var(--muted); }
+.org-cargo { font: 400 21px/1.15 var(--serif); margin-top: 2px; }
+.org-nombre { font-weight: 500; }
+.org-funcion { color: var(--muted); font-size: 12px; line-height: 1.4; margin-top: 4px; }
+.org-pie { margin-top: 8px; padding-top: 8px; border-top: 1px dashed var(--line-strong); font-size: 12px; color: var(--ink-2); font-variant-numeric: tabular-nums; }
+@media screen and (max-width: 760px) {
+  .org-wrap { padding: 16px; }
+  .org, .org ul { display: block; padding-top: 0; }
+  .org ul { margin-left: 14px; padding-left: 14px; border-left: 1px solid var(--line-strong); }
+  .org li { display: block; padding: 10px 0 0; }
+  .org li::before, .org li::after, .org ul::before { display: none; }
+  .org-node, .org-node--top { width: auto; }
+}
+@media print {
+  .org-wrap { overflow: visible; }
+  .org-node { box-shadow: none; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+  .org, .org li { break-inside: avoid; }
+}
+
 /* ---------------------------------------------------------------- pie */
 .site-footer { border-top: 1px solid var(--line); color: var(--muted); font-size: 12px; }
 .site-footer .wrap { display: flex; flex-wrap: wrap; justify-content: space-between; gap: 8px; padding-top: 16px; padding-bottom: 16px; }
@@ -418,6 +464,12 @@ kbd { font: 500 11px var(--sans); border: 1px solid var(--line-strong); border-b
   .stack td[data-label]::before { content: attr(data-label); color: var(--muted); font: 400 12.5px var(--sans); text-align: left; }
   .stack td.acciones { justify-content: flex-start; flex-wrap: wrap; gap: 6px; padding-top: 8px; }
   .stack td.acciones::before { display: none; }
+}
+
+@media screen and (max-width: 430px) {
+  .brand-name { display: none; }
+  .topbar .wrap { gap: 8px; }
+  .nav a { padding: 6px 7px; font-size: 13px; }
 }
 
 /* ---------------------------------------------------------------- impresión */

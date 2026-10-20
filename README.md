@@ -49,14 +49,17 @@ Para volver a los datos de ejemplo usa **Reiniciar demo**, en el pie de página.
 
 | # | Paso | Ruta | Qué ocurre |
 | --- | ------ | ------ | ------------ |
-| 1 | Empleados (CRUD) | `/empleados` | Alta, edición, activar/inactivar y eliminar. Incluye mensualizar décimos y fondos, gastos personales anuales y cargas familiares (0 a 20). Un empleado que ya aparece en un rol generado no se elimina: se inactiva. |
+| 1 | Empleados (CRUD) | `/empleados` | Alta, edición, activar/inactivar y eliminar. Cada empleado tiene departamento (Gerencia General, Tecnología, Finanzas, Marketing u Operaciones), **reporta a** (jefe inmediato; vacío = máxima autoridad), función principal y estructura ocupacional (fija su sueldo mínimo sectorial, sección 5.9). También mensualizar décimos y fondos, gastos personales anuales y cargas familiares (0 a 20). El formulario impide reportarse a sí mismo y formar ciclos. No se puede eliminar a un jefe que tiene subordinados: primero hay que cambiarles la línea de reporte. Un empleado que ya aparece en un rol generado no se elimina: se inactiva. |
 | 2 | Nuevo rol | `/roles/nuevo` | Eliges año y mes. Por cada empleado activo hay una fila editable con días (30 por defecto), horas 50%, horas 100%, comisiones, anticipos de sueldo y préstamo quirografario IESS. Si el rol del periodo ya existe, sus novedades se precargan. La columna **Neto estimado** se recalcula mientras escribes (`POST /roles/preview` usa el mismo `calculos.py`, sin guardar). `Enter` baja a la fila siguiente. |
 | 3 | Generar | `POST /roles/generar` | Por cada empleado activo llama a `calculos.calcular_rol()`, una función pura que no toca la base de datos. Valida días entre 1 y 30 y valores numéricos ≥ 0. |
 | 4 | Guardar | (mismo POST) | Dentro de una transacción: borra el rol previo del mismo periodo (si existe), guarda la cabecera y luego los detalles. Regenerar reemplaza el rol. |
 | 5 | Vista consolidada | `/roles/<id>` | Totales de ingresos, descuentos y neto por empleado. El costo empleador va en una tabla aparte (provisiones y aportes patronales) que no afecta el neto. Filas clicables; en celular se muestra como tarjetas. Se imprime en A4 horizontal. **Exportar Excel** (`/roles/<id>/excel`) descarga un `.xlsx` con 4 hojas: Rol de pagos, Costo empleador, Planilla IESS y Transferencias (archivo para el banco), con totales como fórmulas `SUM`. |
 | 6 | Rol individual | `/roles/<id>/empleado/<det_id>` | Rol imprimible en A4 con firmas, fechas de pago informativas y la sección "¿Cómo se calculó este rol?" de 9 pasos. Botones ← / → (o flechas del teclado) para pasar al siguiente empleado. |
+| extra | Organigrama y remuneraciones | `/organigrama` | Árbol de cargos con líneas de autoridad, generado desde "reporta a". Cada tarjeta muestra departamento, cargo, nombre, función y "1 trabajador · sueldo". Debajo está la tabla de remuneraciones que pide la PEA 3 y el panel **"¿Es sostenible?"**. Como el organigrama y la tabla salen de los mismos datos, todo cargo del organigrama aparece en la tabla. |
 
 El listado de roles está en `/`.
+
+Son dos libros Excel distintos. El del **rol** (`/roles/<id>/excel`, paso 5) tiene 4 hojas de nómina y banco. El de la **tabla de remuneraciones** (`/organigrama/excel`, botón *Exportar Excel* del organigrama) tiene tres hojas: *Parámetros* (celdas amarillas editables y la tabla del IR como rango con nombre), *Tabla de remuneraciones* (número de trabajadores y remuneración como entradas; aportes, 13.º, 14.º, vacaciones, fondos y costo como fórmulas, más el bloque de sostenibilidad) y *Cálculo detallado* (el Gerente General paso a paso, con el IR por `VLOOKUP`). Al cambiar el sueldo o el n.º de trabajadores, todo se recalcula en Excel.
 
 ---
 
@@ -78,7 +81,7 @@ Se ejecuta con un solo comando: `python app.py`.
 
 | Tabla | Campos clave | Rol |
 | ------- | -------------- | ----- |
-| `empleados` | `cedula` (UNIQUE), `nombres`, `apellidos`, `cargo`, `sueldo`, `fecha_ingreso`, `tipo_contrato`, `activo`, `mensualiza_decimos` (0 por defecto), `mensualiza_fondos` (1 por defecto), `gastos_personales`, `cargas` | Maestro de empleados. |
+| `empleados` | `cedula` (UNIQUE), `nombres`, `apellidos`, `cargo`, `sueldo`, `fecha_ingreso`, `tipo_contrato`, `activo`, `mensualiza_decimos` (0 por defecto), `mensualiza_fondos` (1 por defecto), `gastos_personales`, `cargas`, `departamento`, `reporta_a` (FK a `empleados.id`; NULL = máxima autoridad), `funcion`, `estructura` (código de la tabla sectorial: A1, B1, B2 o E2; vacío si no aplica) | Maestro de empleados y organigrama. `reporta_a` define las líneas de autoridad. |
 | `roles_cabecera` | `anio`, `mes` (**UNIQUE**), `generado_en`, `n_empleados`, `total_ingresos`, `total_descuentos`, `total_neto`, `total_costo`, `total_iess`, `total_ir` | Un registro por periodo con los totales. `total_iess` = aporte personal + patronal + IECE/SECAP (lo que se transfiere al IESS). |
 | `roles_detalle` | `rol_id` (FK, `ON DELETE CASCADE`), `empleado_id` (FK), **snapshot** de `nombre`, `cedula`, `cargo`, `sueldo`; novedades (`dias`, `h50`, `h100`, `comisiones`, `anticipos`, `prestamos_iess`); resultados (`total_gravado`, `iess_personal`, `rebaja_gp`, `ir`, `neto`, `costo_total`, etc.) | Una fila por empleado y periodo. |
 
@@ -86,7 +89,7 @@ Se ejecuta con un solo comando: `python app.py`.
 
 **Por qué `UNIQUE(anio, mes)`:** solo puede existir un rol por periodo. Regenerar borra la cabecera anterior (el detalle cae en cascada) en lugar de duplicar datos.
 
-**Versión del esquema:** `PRAGMA user_version` guarda `SCHEMA_VERSION` (hoy 2). Si al arrancar la base tiene otra versión, se renombra como `roles_v<N>_respaldo.db` y se crea una nueva con los empleados de ejemplo. Nada se borra en silencio.
+**Versión del esquema:** `PRAGMA user_version` guarda `SCHEMA_VERSION` (hoy 3; la versión 3 agrega las columnas de organización a `empleados`). Si al arrancar la base tiene otra versión, se renombra como `roles_v<N>_respaldo.db` y se crea una nueva con los 4 socios de FERIAUTO. Nada se borra en silencio: la base de la versión 2 quedó como `roles_v2_respaldo.db`.
 
 ---
 
@@ -173,6 +176,8 @@ Rebaja = 18% × menor(gastos personales anuales proyectados, tope). Tope = canas
 
 Los gastos personales y las cargas se capturan en la ficha del empleado; la proyección anual es la que entrega el trabajador al empleador.
 
+Ejemplo teórico (no corresponde a un empleado de la semilla): gastos personales de $ 8.000 con 2 cargas. Tope = 11 × 821,80 = 9.039,80; rebaja = 18% × 8.000 = 1.440,00. Si el impuesto causado fuera $ 3.068,65, el IR anual sería 3.068,65 − 1.440,00 = 1.628,65 y el mensual 135,72. Si la rebaja superara el impuesto causado, el IR queda en 0.
+
 ### 5.7 Mensualización
 
 Por ley, los **fondos de reserva** se pagan cada mes desde el mes 13, salvo que el trabajador pida acumularlos en el IESS; por eso *mensualiza fondos* viene marcado por defecto. Los **décimos** (13° y 14°) se acumulan, salvo que el trabajador pida mensualizarlos.
@@ -183,13 +188,26 @@ Lo mensualizado se paga en el rol como ingreso **no gravado**: no paga IESS ni I
 
 El rol individual muestra cuándo se paga cada beneficio: 13° hasta el 24 de diciembre; 14° hasta el 15 de agosto para Sierra/Amazonía o hasta el 15 de marzo para Costa/Galápagos. La fecha sale de `EMPRESA["region"]` en `app.py` (la demo está en Sierra, por eso dice "paga 15 ago"; con "Costa" diría "paga 15 mar"). Es solo informativa: la región no altera ningún monto.
 
+### 5.9 Salario mínimo sectorial
+
+Además del SBU, cada cargo tiene un mínimo según su **estructura ocupacional**. Fuente: comisión sectorial 12 "Tecnología: hardware y software", rama 1 "Informática y actividades conexas" (CIIU J62). Para 2026 no se emitió tabla nueva: según el Ministerio del Trabajo rige la tabla 2025 (Acuerdo MDT-2024-301) y los valores menores al SBU suben a $ 482. Un cargo no contemplado no puede ganar menos que el menor valor de su rama (art. 5 del acuerdo).
+
+| Estructura | Cargo de referencia | Mínimo mensual ($) |
+| --- | --- | ---: |
+| A1 | Director / jefe de área | 507,37 |
+| B1 | Supervisor de sistemas, desarrollo y proyectos | 506,67 |
+| B2 | Supervisor de diseño de software / administrador de BD | 505,97 |
+| E2 | Cargo no contemplado (mínimo de la rama) | 493,29 |
+
+Si el sueldo de un empleado es menor al mínimo de su estructura, el rol guarda un aviso (no bloquea la generación), y la tabla de remuneraciones muestra el mínimo junto a cada cargo. Los cuatro socios de FERIAUTO están en A1, con sueldos de arranque sobre ese mínimo (sección 7).
+
 ---
 
 ## 6. Ejemplos resueltos a mano
 
-El primer caso es el del self-check de `calculos.py`. El segundo (Jorge) no está en el self-check; sus cifras salen de `calcular_rol()` con los mismos datos. El self-check también prueba la rebaja con María (gastos $ 8.000 y 2 cargas), donde el impuesto queda en 0.
+Los dos casos son de referencia. El primero (María) es un caso de prueba del self-check de `calculos.py`, no un empleado de la semilla. El segundo (Sebastián) es el Gerente General de FERIAUTO, con datos de la semilla. El self-check también prueba la rebaja con María (gastos $ 8.000 y 2 cargas), donde el impuesto queda en 0; una rebaja con impuesto positivo se ilustra en la sección 5.6.
 
-### 6.1 María López
+### 6.1 María López (caso de prueba)
 
 Datos: sueldo $ 1.500, 30 días, 10 h al 50%, comisión $ 200, ingreso el 15/01/2024 (más de un año), sin gastos personales ni cargas. Décimos y fondos acumulados (no mensualizados). Periodo: octubre 2026.
 
@@ -230,33 +248,42 @@ Costo empleador         $ 1.793,75 + provisiones 631,75 = $ 2.425,50
 
 Como María acumula los fondos, no se pagan en el rol. Si los mensualizara, su neto sería $ 1.726,89 (suma los $ 149,42 como no gravados); IESS, IR y costo no cambian.
 
-### 6.2 Jorge Castillo
+### 6.2 Sebastián Constante (Gerente General)
 
-Datos: gerente general, sueldo $ 3.200, 8 h al 100%, sin comisiones, gastos personales anuales proyectados de $ 8.000, 2 cargas familiares, ingreso el 01/06/2020, fondos mensualizados (por defecto). Periodo: octubre 2026.
-
-``` text
-Valor hora              3.200 / 240                     = 13,333…
-HE 100%                 8 × 13,333… × 2                 = 213,33
-TOTAL GRAVADO           3.200 + 213,33                  = 3.413,33
-IESS personal           3.413,33 × 9,45%                = 322,56
-Base IR anual           (3.413,33 − 322,56) × 12        = 37.089,24
-Impuesto causado        2.678 + 20% × (37.089,24 − 35.136) = 3.068,65
-Tope GP                 11 canastas × $ 821,80          = 9.039,80
-Rebaja GP               18% × menor(8.000 ; 9.039,80)   = 1.440,00
-IR anual                3.068,65 − 1.440,00             = 1.628,65
-IR mensual              1.628,65 / 12                   = 135,72
-```
-
-Jorge tiene fondos mensualizados ($ 284,33 no gravados). Entran al neto, no a la base del IR:
+Datos: sueldo $ 550, 30 días, sin horas extra ni comisiones, sin gastos personales ni cargas. Ingreso el 01/09/2026, contrato indefinido, Código del Trabajo. Décimos acumulados y fondos mensualizados (por defecto), pero todavía no hay fondos que pagar porque no cumple 365 días. Periodo: octubre 2026.
 
 ``` text
-Total ingresos          3.413,33 + 284,33 (fondos)      = 3.697,66
-Descuentos              322,56 + 135,72                 = 458,28
-NETO A RECIBIR                                          = 3.239,38
-Costo empleador         3.413,33 + provisiones 1.165,88 = 4.579,21
+TOTAL GRAVADO           550 × 30 / 30                   = 550,00
+IESS personal           550 × 9,45%                     = 51,98
+Base IR anual           (550 − 51,98) × 12              = 5.976,24
+Impuesto causado        menor a 12.208: tramo 0%        = 0,00
+IR mensual              0 / 12                          = 0,00
+DESCUENTOS              51,98 + 0,00                    = 51,98
+NETO A RECIBIR          550,00 − 51,98                  = 498,02
 ```
 
-Si sus gastos personales fueran 0, la rebaja sería 0 y el IR mensual subiría a $ 255,72.
+Provisiones:
+
+| Concepto | Cálculo | Valor |
+| ---------- | --------- | ------: |
+| 13° | 550 / 12 | $ 45,83 |
+| 14° | 482 / 12 × 30/30 | $ 40,17 |
+| Vacaciones | 550 / 24 | $ 22,92 |
+| Fondos de reserva | 0: cumple 365 días en sep 2027 | $ 0,00 |
+| Aporte patronal | 550 × 11,15% | $ 61,33 |
+| IECE + SECAP | 550 × 1% | $ 5,50 |
+| **Total provisiones** | | **$ 175,75** |
+
+Cadena completa:
+
+``` text
+Sueldo bruto (gravado)  $ 550,00
+− Descuentos            $  51,98   (IESS 51,98 + IR 0,00)
+= NETO A RECIBIR        $ 498,02
+Costo empleador         $ 550,00 + provisiones 175,75 = $ 725,75
+```
+
+Los décimos están acumulados, así que no suman al neto. Si se mensualizaran, cada uno sumaría al neto, como en 6.1.
 
 ---
 
@@ -275,25 +302,24 @@ Si sus gastos personales fueran 0, la rebaja sería 0 y el IR mensual subiría a
 | Recargo nocturno del 25% no incluido | Fuera del alcance del taller. |
 | Decimal con redondeo half-up por línea | Evita errores de punto flotante y el redondeo bancario de `round()`. Los valores se guardan como float en SQLite al final. |
 | Cédula: módulo 10, provincia 01-24 o 30, tercer dígito menor a 6 | Valida el formato. No consulta el Registro Civil. |
-| Avisos: sueldo menor al SBU, más de 48 h al 50% al mes, neto negativo | Son advertencias que se guardan en el rol. No bloquean la generación. |
+| Avisos: sueldo menor al SBU o al mínimo sectorial de su estructura, más de 48 h al 50% al mes, neto negativo | Son advertencias que se guardan en el rol. No bloquean la generación. |
+| Sueldos de arranque sobre el mínimo A1 y con jerarquía (Gerente General > directores) | El mercado paga unos 1.200–1.800 a directores (Paylab y Jobint, abr-2026), pero el contrato con el GAD ($ 3.800) no lo cubre. Subir a esos montos deja el resultado negativo (sección 8, paso 7). |
 | El tipo de contrato es informativo | No cambia ningún cálculo. |
 | Fechas de pago solo informativas | No cambian ningún monto (sección 5.8). |
 | Sin login, sin PDF y sin cierre o aprobación de roles | Es una demo de un solo usuario. Para imprimir se usa el navegador. |
 
 ---
 
-## 8. Guion sugerido para la demo (~5 min)
+## 8. Guion sugerido para la demo (PEA 3, ~6 min)
 
-1. Mostrar la pestaña **Empleados** con los 4 ejemplos, su antigüedad y su estado.
-2. Crear un empleado nuevo y probar una cédula inválida: el formulario la rechaza.
-3. En **Generar rol del mes** (octubre 2026), escribir 10 h al 50% y comisión $ 200 para **María López** mirando la columna *Neto estimado*: cambia al instante (con 20 h baja la proporción neta porque sube de tramo de IR). Luego **Calcular y generar rol**.
-4. Abrir el rol consolidado y explicar la barra de neto, descuentos y aportes/provisiones.
-5. Abrir el rol individual de María, recorrer "¿Cómo se calculó este rol?" y compararlo con la sección 6.1.
-6. Editar a María, marcar **mensualizar décimo tercero y cuarto** y regenerar el rol. El neto sube de $ 1.577,47 a $ 1.767,12 (suma el 13° y el 14°), y el costo empleador se mantiene en $ 2.425,50.
-7. **Jorge Castillo**: en el nuevo rol, poner 8 h al 100%. Con sus gastos personales de $ 8.000 y 2 cargas, la retención es $ 135,72. Editar sus gastos a 0 y regenerar: la retención sube a $ 255,72 (desaparece la rebaja de $ 1.440).
-8. **Carlos Pérez** (sueldo $ 650, décimos y fondos mensualizados): en su rol individual, 13°, 14° y fondos aparecen como "pagado en rol". Su neto es $ 737,06 y su costo empleador $ 904,55. Mostrar que IESS e IR se calculan solo sobre $ 650.
-9. **Exportar Excel** desde el consolidado: abrir la hoja *Planilla IESS* (lo que se paga al IESS) y *Transferencias* (lo que se paga al banco), y mostrar que los totales son fórmulas.
-10. Usar **Reiniciar demo** (pie de página) para dejarlo listo para el siguiente grupo.
+1. **Empleados:** los 4 directores de FERIAUTO, con su departamento y su jefe inmediato.
+2. **Organigrama** (`/organigrama`): explicar las líneas de autoridad (desde "reporta a") y la función de cada cargo.
+3. **Tabla de remuneraciones:** recorrer cada rubro (aportes, 13.º, 14.º, vacaciones, fondos y costo) y explicar por qué el sueldo supera el mínimo A1 de $ 507,37.
+4. **¿Es sostenible?:** mostrar el margen de $ 441,79 (11,6 %) y cómo los fondos desde el mes 13 lo bajan a $ 263,53.
+5. **Rol de octubre 2026:** generarlo y abrir el rol individual de **Sebastián Constante**. Revisar "¿Cómo se calculó?" y compararlo con la sección 6.2.
+6. **Excel de la tabla** (*Exportar Excel* en el organigrama): cambiar un sueldo en Excel y mostrar cómo se recalcula todo.
+7. **Sueldos de mercado en vivo:** editar a un director y subir su sueldo a 1.200 (p. ej.), luego recargar el organigrama: el margen de "¿Es sostenible?" se vuelve negativo.
+8. **Reiniciar demo** (pie de página) para dejarlo listo para el siguiente grupo.
 
 ---
 
@@ -301,15 +327,16 @@ Si sus gastos personales fueran 0, la rebaja sería 0 y el IR mensual subiría a
 
 ``` text
 roles_pago/
-├── app.py            rutas Flask, esquema SQLite (versión 2), validaciones y guardado
-├── calculos.py       motor de cálculo puro + self-check
-├── exportar.py       libro Excel (.xlsx) del rol con openpyxl + self-check
+├── app.py            rutas Flask, esquema SQLite (versión 3), validaciones, guardado y organigrama
+├── calculos.py       motor de cálculo puro, tabla sectorial y self-check
+├── exportar.py       libro Excel (.xlsx) del rol y de la tabla de remuneraciones con openpyxl + self-check
 ├── templates/        plantillas Jinja: base, roles, empleados, empleado_form,
-│                     rol_nuevo, rol_ver, rol_individual
+│                     rol_nuevo, rol_ver, rol_individual, organigrama
 ├── static/           style.css (sistema visual "libro contable") y favicon.svg
 ├── iniciar.bat / iniciar.sh   arranque con doble clic (crea .venv e instala dependencias)
 ├── requirements.txt  flask, openpyxl
-└── roles.db          base SQLite local, se crea sola (no se sube a git)
+├── roles.db          base SQLite local, se crea sola (no se sube a git)
+└── roles_v<N>_respaldo.db     base de un esquema anterior, respaldada al cambiar de versión
 ```
 
 ---
@@ -325,6 +352,9 @@ Las reglas se contrastaron con prensa y calculadoras ecuatorianas: tabla de IR 2
   - <https://www.ecija.com/actualidad-insights/sri-publica-nuevas-tablas-para-liquidar-el-impuesto-a-la-renta-2026/>
   - <https://nmslaw.com.ec/blog/2026/01/05/tablas-impuesto-renta-2026-ecuador/>
 - SBU 2026 de $ 482: <https://www.vistazo.com/2025-12-15-salario-basico-usd-482-2026-ecuador-incremento-dolares-IC10565269>
+- Salarios mínimos sectoriales (comisión 12, rama 1, CIIU J62), Acuerdo Ministerial MDT-2024-301. Para 2026 no se emitió tabla nueva: según el Ministerio del Trabajo rige la de 2025.
+  - <https://www.trabajo.gob.ec/wp-content/uploads/2024/12/ACUERDO-MINISTERIAL-NRO.-MDT-2024-301-signed.pdf>
+- Mercado de directores (referencia de 1.200 a 1.800 dólares): Paylab y Jobint, abril de 2026.
 - Aportes IESS (9,45% / 11,15%) e IECE/SECAP 1%: <https://runahr.com/ec/recursos/salario/calculadora-de-salario/>
 - Canasta $ 821,80 y tabla de cargas: <https://elmercurio.com.ec/?p=1239654>
 - Fondos de reserva mensualizados por defecto: <https://primicias.ec/economia/fondos-reserva-iess-consejos-acumular-mensualizar-88720>

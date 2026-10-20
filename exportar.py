@@ -10,10 +10,14 @@ Ejecuta `python exportar.py` para correr el self-check.
 import io
 
 from openpyxl import Workbook
+from openpyxl.formatting.rule import CellIsRule
 from openpyxl.styles import Alignment, Border, Font, PatternFill, Side
+from openpyxl.workbook.defined_name import DefinedName
+from openpyxl.worksheet.datavalidation import DataValidation
 
 FILA_TABLA = 5  # encabezados de la tabla; filas 1-3 son el membrete de la empresa
 FONDO = PatternFill("solid", fgColor="F2F0EA")
+AMARILLO = PatternFill("solid", fgColor="FFF6D6")   # celdas editables
 FINO, DOBLE = Side(style="thin"), Side(style="double")
 
 
@@ -127,6 +131,189 @@ def libro_rol(cab, detalles, empresa, mes_nombre):
     return salida.getvalue()
 
 
+def _membrete(ws, empresa):
+    """Encabezado de 3 filas: empresa, RUC y régimen."""
+    ws["A1"] = empresa["nombre"]
+    ws["A1"].font = Font(bold=True, size=14)
+    ws["A2"] = f"RUC {empresa['ruc']}"
+    ws["A3"] = "Régimen: Código del Trabajo · Tabla de remuneraciones 2026"
+    ws["A3"].font = Font(italic=True, color="666666")
+
+
+def _encabezados(ws, fila, titulos, anchos):
+    """Fila de títulos en negrita con fondo #F2F0EA y el ancho de cada columna."""
+    for j, (t, ancho) in enumerate(zip(titulos, anchos), start=1):
+        c = ws.cell(row=fila, column=j, value=t)
+        c.font, c.fill, c.border = Font(bold=True), FONDO, Border(bottom=FINO)
+        c.alignment = Alignment(wrap_text=True, vertical="center", horizontal="left" if j == 1 else "center")
+        ws.column_dimensions[c.column_letter].width = ancho
+    ws.row_dimensions[fila].height = 45
+
+
+def libro_remuneraciones(tabla, empresa, calc):
+    """
+    Devuelve el .xlsx (bytes) de la tabla de remuneraciones con FÓRMULAS vivas (PEA 3, requisito 4):
+    al cambiar una remuneración, el n.º de trabajadores o un parámetro, todo se recalcula en Excel.
+    Hojas: Parámetros (celdas con nombre) · Tabla de remuneraciones · Cálculo detallado (1 trabajador).
+    """
+    wb = Workbook()
+
+    # ---------------------------------------------------------------- 1. Parámetros
+    p = wb.active
+    p.title = "Parámetros"
+    _membrete(p, empresa)
+    p["A5"] = "Cambie los valores amarillos y todo se recalcula"
+    p["A5"].font = Font(bold=True, color="8A6D00")
+    _encabezados(p, 7, ["Parámetro", "Valor", "Detalle"], [38, 16, 62])
+    parametros = [   # (nombre del rango, etiqueta, valor, formato, detalle)
+        ("SBU", "Salario Básico Unificado 2026", calc.SBU, "#,##0.00", "Base del décimo 14° (SBU ÷ 12)"),
+        ("P_PERSONAL", "Aporte personal IESS", calc.IESS_PERSONAL, "0.00%", "Se descuenta al trabajador"),
+        ("P_PATRONAL", "Aporte patronal IESS", calc.IESS_PATRONAL, "0.00%", "Lo paga la empresa"),
+        ("P_IECE_SECAP", "IECE + SECAP", calc.IECE_SECAP, "0.00%", "Adicional al patronal: 11,15 % + 1 % = 12,15 %"),
+        ("P_FONDOS", "Fondos de reserva", calc.FONDOS_RESERVA, "0.00%", "Desde el mes 13 de trabajo"),
+        ("INGRESO_MENSUAL", "Ingreso mensual del contrato con el GAD", empresa["ingreso_mensual"], "#,##0.00", "USD por mes"),
+        ("OTROS_COSTOS", "Otros costos mensuales", empresa["otros_costos"], "#,##0.00", "USD por mes (sin personal)"),
+    ]
+    for i, (nombre, etiqueta, valor, fmt, detalle) in enumerate(parametros, start=8):
+        p.cell(i, 1, etiqueta)
+        c = p.cell(i, 2, float(valor))
+        c.number_format, c.fill, c.border = fmt, AMARILLO, Border(bottom=FINO)
+        p.cell(i, 3, detalle).font = Font(italic=True, color="666666")
+        wb.defined_names[nombre] = DefinedName(nombre, attr_text=f"'Parámetros'!$B${i}")
+
+    fila_ir = 8 + len(parametros) + 1
+    p.cell(fila_ir, 1, "Tabla del impuesto a la renta 2026 (personas naturales)").font = Font(bold=True)
+    for j, t in enumerate(["Desde", "Hasta", "Impuesto fracción básica", "% sobre el excedente"], start=1):
+        c = p.cell(fila_ir + 1, j, t)
+        c.font, c.fill, c.border = Font(bold=True), FONDO, Border(bottom=FINO)
+        c.alignment = Alignment(wrap_text=True, horizontal="left" if j == 1 else "right")
+    for i, (desde, hasta, imp, pct) in enumerate(calc.TABLA_IR_2026, start=fila_ir + 2):
+        for j, (v, fmt) in enumerate([(desde, "#,##0.00"), (hasta, "#,##0.00"), (imp, "#,##0.00"), (pct, "0.00%")], 1):
+            c = p.cell(i, j, "en adelante" if v is None else float(v))
+            c.number_format = fmt
+            c.alignment = Alignment(horizontal="right")
+    ini, fin = fila_ir + 2, fila_ir + 1 + len(calc.TABLA_IR_2026)
+    wb.defined_names["TABLA_IR"] = DefinedName("TABLA_IR", attr_text=f"'Parámetros'!$A${ini}:$D${fin}")
+    p.column_dimensions["D"].width = 22
+    p.freeze_panes = "A8"
+
+    # ---------------------------------------------------------------- 2. Tabla de remuneraciones
+    t = wb.create_sheet("Tabla de remuneraciones")
+    _membrete(t, empresa)
+    ini, fin = FILA_TABLA + 1, FILA_TABLA + len(tabla)       # filas de datos
+    tot = fin + 1
+    # (título, ancho, formato, valor | fórmula con {r}); E, F y M son las entradas (amarillo)
+    cols = [
+        ("Cargo", 34, "@", lambda d: d["cargo"]),
+        ("Departamento", 18, "@", lambda d: d["departamento"]),
+        ("Estructura ocupacional", 34, "@", lambda d: d["estructura"] or ""),
+        ("Mínimo sectorial", 12, "#,##0.00", lambda d: d["minimo"]),
+        ("N.º trabajadores", 12, "0", lambda d: d["n"]),
+        ("Remuneración mensual", 14, "#,##0.00", lambda d: d["sueldo"]),
+        ("¿Cumple mínimo?", 11, "General", '=IF(F{r}>=D{r},"Sí","NO")'),
+        ("Aporte personal IESS", 13, "#,##0.00", "=F{r}*P_PERSONAL"),
+        ("Aporte patronal IESS 12,15 %", 14, "#,##0.00", "=F{r}*(P_PATRONAL+P_IECE_SECAP)"),
+        ("Décimo 13°", 12, "#,##0.00", "=F{r}/12"),
+        ("Décimo 14°", 12, "#,##0.00", "=SBU/12"),
+        ("Vacaciones", 12, "#,##0.00", "=F{r}/24"),
+        ("¿Fondos de reserva?", 11, "General", lambda d: "No"),   # ingresan el 01-09-2026: aún no cumplen el mes 13
+        ("Fondos de reserva", 13, "#,##0.00", '=IF(M{r}="Sí",F{r}*P_FONDOS,0)'),
+        ("Costo mensual por trabajador", 15, "#,##0.00", "=F{r}+I{r}+J{r}+K{r}+L{r}+N{r}"),
+        ("Costo mensual total", 15, "#,##0.00", "=O{r}*E{r}"),
+    ]
+    _encabezados(t, FILA_TABLA, [c[0] for c in cols], [c[1] for c in cols])
+    for r, d in enumerate(tabla, start=ini):
+        for j, (_, _, fmt, v) in enumerate(cols, start=1):
+            c = t.cell(r, j, v(d) if callable(v) else v.format(r=r))
+            c.number_format = fmt
+            if c.column_letter in "EFM":
+                c.fill = AMARILLO
+            if fmt == "General":
+                c.alignment = Alignment(horizontal="center")
+    dv = DataValidation(type="list", formula1='"Sí,No"', allow_blank=False)
+    t.add_data_validation(dv)
+    dv.add(f"M{ini}:M{fin}")
+    t.conditional_formatting.add(f"G{ini}:G{fin}", CellIsRule(operator="equal", formula=['"NO"'],
+                                                              font=Font(bold=True, color="9C0006")))
+
+    # totales (borde doble inferior): n.º y costo total con SUM; el resto ponderado por n con SUMPRODUCT
+    for j in range(1, len(cols) + 1):
+        L = t.cell(1, j).column_letter
+        c = t.cell(tot, j)
+        if j == 1:
+            c.value = "TOTALES"
+        elif L in "EP":
+            c.value = f"=SUM({L}{ini}:{L}{fin})"
+        elif L in "FHIJKLN":
+            c.value = f"=SUMPRODUCT({L}{ini}:{L}{fin},$E${ini}:$E${fin})"
+        c.number_format = "0" if L == "E" else "#,##0.00"
+        c.font, c.border = Font(bold=True), Border(top=FINO, bottom=DOBLE)
+
+    # bloque de sostenibilidad
+    a = tot + 2
+    t.cell(a, 1, "Sostenibilidad mensual del contrato").font = Font(bold=True, size=12)
+    filas = [
+        ("Ingreso mensual (contrato con el GAD)", "=INGRESO_MENSUAL", "#,##0.00"),
+        ("(−) Costo de personal", f"=P{tot}", "#,##0.00"),
+        ("(−) Otros costos", "=OTROS_COSTOS", "#,##0.00"),
+        ("Resultado mensual", f"=B{a+1}-B{a+2}-B{a+3}", "#,##0.00"),
+        ("Margen sobre ingreso", f"=IF(B{a+1}=0,0,B{a+4}/B{a+1})", "0.00%"),
+        ("Personal sobre ingreso", f"=IF(B{a+1}=0,0,B{a+2}/B{a+1})", "0.00%"),
+    ]
+    for i, (etiqueta, f, fmt) in enumerate(filas, start=a + 1):
+        t.cell(i, 1, etiqueta)
+        t.cell(i, 2, f).number_format = fmt
+    t.cell(a + 4, 1).font = t.cell(a + 4, 2).font = Font(bold=True)
+    t.conditional_formatting.add(f"B{a+4}", CellIsRule(operator="greaterThanOrEqual", formula=["0"],
+                                 fill=PatternFill("solid", bgColor="C6EFCE"), font=Font(bold=True, color="006100")))
+    t.conditional_formatting.add(f"B{a+4}", CellIsRule(operator="lessThan", formula=["0"],
+                                 fill=PatternFill("solid", bgColor="FFC7CE"), font=Font(bold=True, color="9C0006")))
+    t.freeze_panes = t.cell(ini, 2)       # debajo de los encabezados; el cargo queda fijo
+
+    # ---------------------------------------------------------------- 3. Cálculo detallado (1.er trabajador)
+    h = wb.create_sheet("Cálculo detallado")
+    _membrete(h, empresa)
+    h["A4"] = f"Desarrollo paso a paso: {tabla[0]['cargo']} (primera fila de la tabla de remuneraciones)"
+    h["A4"].font = Font(bold=True)
+    _encabezados(h, FILA_TABLA, ["Concepto", "Fórmula", "Valor"], [44, 56, 16])
+    T = "'Tabla de remuneraciones'!"
+    pasos = [   # (concepto, explicación, fórmula, formato); C6 = remuneración, C7 = aporte personal, C8 = base IR...
+        ("Remuneración mensual", "Dato de la tabla de remuneraciones", f"={T}F{ini}", "#,##0.00"),
+        ("Aporte personal IESS 9,45 %", "Remuneración × 9,45 %", f"={T}H{ini}", "#,##0.00"),
+        ("Ingreso gravado anual proyectado", "(Remuneración − aporte personal) × 12", "=(C6-C7)*12", "#,##0.00"),
+        ("Fracción básica (desde)", "Límite inferior del tramo de la tabla IR", "=VLOOKUP(C8,TABLA_IR,1,TRUE)", "#,##0.00"),
+        ("Impuesto de la fracción básica", "Impuesto fijo del tramo", "=VLOOKUP(C8,TABLA_IR,3,TRUE)", "#,##0.00"),
+        ("% sobre el excedente", "Porcentaje del tramo", "=VLOOKUP(C8,TABLA_IR,4,TRUE)", "0.00%"),
+        ("Impuesto a la renta anual", "Impuesto fracción + (base − desde) × %", "=C10+(C8-C9)*C11", "#,##0.00"),
+        ("Retención mensual de IR", "IR anual ÷ 12", "=C12/12", "#,##0.00"),
+        ("NETO A RECIBIR", "Remuneración − aporte personal − retención IR", "=C6-C7-C13", "#,##0.00"),
+        ("Aporte patronal 12,15 %", "Remuneración × (11,15 % + 1 % IECE/SECAP)", f"={T}I{ini}", "#,##0.00"),
+        ("Décimo tercero", "Remuneración ÷ 12", f"={T}J{ini}", "#,##0.00"),
+        ("Décimo cuarto", "SBU ÷ 12", f"={T}K{ini}", "#,##0.00"),
+        ("Vacaciones", "Remuneración ÷ 24", f"={T}L{ini}", "#,##0.00"),
+        ("Fondos de reserva", "Remuneración × 8,33 % (solo si aplica)", f"={T}N{ini}", "#,##0.00"),
+        ("COSTO MENSUAL PARA LA EMPRESA", "Remuneración + patronal + provisiones", "=C6+SUM(C15:C19)", "#,##0.00"),
+        ("Costo anual", "Costo mensual × 12", "=C20*12", "#,##0.00"),
+        ("Factor de costo", "Costo mensual ÷ remuneración", "=C20/C6", "0.00"),
+    ]
+    for i, (concepto, texto, f, fmt) in enumerate(pasos, start=FILA_TABLA + 1):
+        h.cell(i, 1, concepto)
+        h.cell(i, 2, texto).font = Font(italic=True, color="666666")
+        h.cell(i, 3, f).number_format = fmt
+        if concepto.isupper():
+            h.cell(i, 1).font = h.cell(i, 3).font = Font(bold=True)
+    ult = FILA_TABLA + len(pasos)
+    h.cell(ult + 2, 1, '="Por cada $1 de sueldo, la empresa paga $"&FIXED(C22,2)').font = Font(bold=True)
+    h.cell(ult + 3, 1, "Sin rebaja por gastos personales (proyección simplificada)").font = Font(italic=True, color="666666")
+    h.freeze_panes = h.cell(FILA_TABLA + 1, 1)
+
+    wb.active = 1                                 # hoja activa: "Tabla de remuneraciones"
+    wb.properties.title = wb.properties.creator = empresa["nombre"]
+    salida = io.BytesIO()
+    wb.save(salida)
+    return salida.getvalue()
+
+
 if __name__ == "__main__":
     from openpyxl import load_workbook
     from calculos import calcular_rol
@@ -163,3 +350,72 @@ if __name__ == "__main__":
     assert pl["H6"].value == detalles[0]["p_fondos"] > 0 and pl["H7"].value == 0   # solo quien acumula fondos
     assert wb["Transferencias"]["D6"].value == "Rol Octubre 2026"
     print("OK exportar")
+
+    # ---- libro de remuneraciones: 4 cargos ficticios, estructura y fórmulas
+    import calculos
+    from decimal import Decimal
+    cargos = [("Gerente General", 1200), ("Director Comercial", 1000),
+              ("Director Financiero", 1000), ("Director de Operaciones", 1000)]
+    tabla = [dict(cargo=c, departamento="Directivo", estructura="", minimo=600, n=1, sueldo=s) for c, s in cargos]
+    emp2 = dict(empresa, nombre="FERIAUTO S.A.S.", regimen="Código del Trabajo", cliente="GAD",
+                ingreso_mensual=3800, otros_costos=530)
+    wb = load_workbook(io.BytesIO(libro_remuneraciones(tabla, emp2, calculos)))
+
+    assert wb.sheetnames == ["Parámetros", "Tabla de remuneraciones", "Cálculo detallado"]
+    assert wb.active.title == "Tabla de remuneraciones" and wb.properties.creator == "FERIAUTO S.A.S."
+    nombres = {"SBU": "$B$8", "P_PERSONAL": "$B$9", "P_PATRONAL": "$B$10", "P_IECE_SECAP": "$B$11",
+               "P_FONDOS": "$B$12", "INGRESO_MENSUAL": "$B$13", "OTROS_COSTOS": "$B$14"}
+    for n, celda in nombres.items():
+        assert wb.defined_names[n].attr_text == "'Parámetros'!" + celda, n
+    assert wb.defined_names["TABLA_IR"].attr_text == "'Parámetros'!$A$18:$D$27"
+    par = wb["Parámetros"]
+    assert par["B8"].value == 482 and par["B9"].value == 0.0945 and par["B13"].value == 3800
+    assert par["B8"].fill.fgColor.rgb.endswith("FFF6D6")
+
+    ws = wb["Tabla de remuneraciones"]
+    assert ws["A1"].value == "FERIAUTO S.A.S." and ws["A2"].value == "RUC 1790000000001"
+    assert ws["A3"].value == "Régimen: Código del Trabajo · Tabla de remuneraciones 2026"
+    assert ws.freeze_panes == "B6" and ws["E6"].value == 1 and ws["F6"].value == 1200 and ws["M6"].value == "No"
+    for r in range(6, 10):                                   # cada celda de cálculo es fórmula y cita las entradas
+        esperado = {"G": f'=IF(F{r}>=D{r},"Sí","NO")', "H": f"=F{r}*P_PERSONAL",
+                    "I": f"=F{r}*(P_PATRONAL+P_IECE_SECAP)", "J": f"=F{r}/12", "K": "=SBU/12", "L": f"=F{r}/24",
+                    "N": f'=IF(M{r}="Sí",F{r}*P_FONDOS,0)', "O": f"=F{r}+I{r}+J{r}+K{r}+L{r}+N{r}", "P": f"=O{r}*E{r}"}
+        for col, f in esperado.items():
+            assert ws[f"{col}{r}"].value == f, f"{col}{r}: {ws[f'{col}{r}'].value}"
+    assert ws["E10"].value == "=SUM(E6:E9)" and ws["P10"].value == "=SUM(P6:P9)"
+    assert ws["H10"].value == "=SUMPRODUCT(H6:H9,$E$6:$E$9)" and ws["F10"].value == "=SUMPRODUCT(F6:F9,$E$6:$E$9)"
+    assert ws["B13"].value == "=INGRESO_MENSUAL" and ws["B14"].value == "=P10" and ws["B15"].value == "=OTROS_COSTOS"
+    assert ws["B16"].value == "=B13-B14-B15" and ws["B17"].value == "=IF(B13=0,0,B16/B13)"
+
+    cd = wb["Cálculo detallado"]
+    assert cd["C6"].value == "='Tabla de remuneraciones'!F6" and cd["C7"].value == "='Tabla de remuneraciones'!H6"
+    assert cd["C12"].value == "=C10+(C8-C9)*C11" and "TABLA_IR" in cd["C9"].value
+    assert all(str(cd[f"C{r}"].value).startswith("=") for r in range(6, 23))
+    assert cd["A25"].value == "Sin rebaja por gastos personales (proyección simplificada)"
+
+    # ---- valores esperados (en Python puro, mismas reglas que las fórmulas)
+    sueldo = Decimal(1200)
+    costo_gg = sueldo * (1 + Decimal("0.1215")) + 100 + Decimal(482) / 12 + 50
+    assert abs(float(costo_gg) - (1200 * 1.1215 + 100 + 40.1667 + 50)) < 0.001
+    base = (sueldo - sueldo * calculos.IESS_PERSONAL) * 12
+    ir_anual = calculos.impuesto_renta_anual(base)[0]
+    print(f"OK libro_remuneraciones (estructura y fórmulas). Esperado GG: costo {costo_gg:.2f}, retención IR {ir_anual / 12:.2f}")
+
+    # ---- recálculo real con LibreOffice, si está instalado
+    import glob, os, subprocess, tempfile
+    soffice = next(iter(glob.glob(r"C:\Program Files*\LibreOffice*\program\soffice.exe")), None)
+    if not soffice:
+        print("LibreOffice no instalado: se omite el recálculo numérico (solo se verificó estructura y fórmulas).")
+    else:
+        with tempfile.TemporaryDirectory() as d:
+            ruta = os.path.join(d, "t.xlsx")
+            open(ruta, "wb").write(libro_remuneraciones(tabla, emp2, calculos))
+            subprocess.run([soffice, "--headless", "--convert-to", "xlsx", "--outdir", os.path.join(d, "out"), ruta],
+                           check=True, capture_output=True, timeout=120)
+            v = load_workbook(os.path.join(d, "out", "t.xlsx"), data_only=True)
+        t, c = v["Tabla de remuneraciones"], v["Cálculo detallado"]
+        assert abs(t["O6"].value - float(costo_gg)) < 0.01, t["O6"].value
+        assert abs(c["C13"].value - float(ir_anual) / 12) < 0.01, c["C13"].value
+        assert abs(t["B16"].value - (3800 - t["P10"].value - 530)) < 0.01
+        print(f"OK recálculo LibreOffice: costo GG {t['O6'].value:.2f}, retención IR {c['C13'].value:.2f}, "
+              f"resultado mensual {t['B16'].value:.2f}")

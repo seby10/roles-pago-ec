@@ -50,6 +50,23 @@ CANASTA_2026 = Decimal("821.80")
 REBAJA_GP = Decimal("0.18")
 CANASTAS_POR_CARGAS = {0: 7, 1: 9, 2: 11, 3: 14, 4: 17, 5: 20}   # 5 o más cargas → 20 canastas
 
+# Salarios mínimos sectoriales (Código del Trabajo): ningún sueldo puede ser menor al mínimo de la
+# estructura ocupacional del cargo. Comisión sectorial 12 "Tecnología: hardware y software", rama 1
+# "Informática y actividades conexas" (CIIU J62). Para 2026 no se emitió tabla nueva: según el MDT rige la
+# tabla 2025 (Acuerdo MDT-2024-301) y los valores menores al SBU suben a $482.
+# Un cargo no contemplado no puede ganar menos que el menor valor de su rama (art. 5 del acuerdo).
+# código → (descripción, mínimo mensual)
+ESCALA_SECTORIAL_2026 = {
+    "A1": ("A1 · Director / jefe de área", Decimal("507.37")),
+    "B1": ("B1 · Supervisor de sistemas, desarrollo y proyectos", Decimal("506.67")),
+    "B2": ("B2 · Supervisor de diseño de software / administrador de BD", Decimal("505.97")),
+    "E2": ("E2 · Cargo no contemplado (mínimo de la rama)", Decimal("493.29")),
+}
+
+
+def minimo_sectorial(estructura):
+    return ESCALA_SECTORIAL_2026.get(estructura or "", ("", SBU))[1]
+
 
 def r2(x):
     """Redondeo contable a centavos (half-up, no el 'redondeo bancario' de round())."""
@@ -152,6 +169,8 @@ def calcular_rol(empleado, novedades, anio, mes):
     avisos = []
     if sueldo < SBU:
         avisos.append(f"Sueldo inferior al SBU 2026 (${SBU}) para jornada completa")
+    elif sueldo < minimo_sectorial(empleado.get("estructura")):
+        avisos.append(f"Sueldo inferior al mínimo sectorial 2026 de su cargo (${minimo_sectorial(empleado.get('estructura'))})")
     if h50 > 48:
         avisos.append("Supera 12 h suplementarias por semana (~48 h/mes)")
     if neto < 0:

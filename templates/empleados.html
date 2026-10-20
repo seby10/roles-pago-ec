@@ -36,7 +36,7 @@
             <a class="person" href="{{ url_for('empleado_editar', id=e.id) }}">{{ e.nombres }} {{ e.apellidos }}</a>
             <div class="sub" style="font-family:var(--mono)">{{ e.cedula }}</div>
           </td>
-          <td data-label="Cargo"><span>{{ e.cargo }}<div class="sub">{{ e.tipo_contrato }}</div></span></td>
+          <td data-label="Cargo"><span>{{ e.cargo }}<div class="sub">{{ e.departamento or e.tipo_contrato }}{% if e.jefe %} · reporta a {{ e.jefe }}{% endif %}</div></span></td>
           <td class="n" data-label="Sueldo"><span>{{ e.sueldo|money }}{% if e.sueldo < P.sbu %} <span class="tag tag--warn">bajo SBU</span>{% endif %}</span></td>
           <td data-label="Ingreso"><span>{{ e.fecha_ingreso|fecha }}<div class="sub">{{ e.antiguedad }}</div></span></td>
           <td data-label="Beneficios"><span>

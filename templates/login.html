@@ -1,0 +1,23 @@
+{% extends "base.html" %}
+{% block title %}Modo edición{% endblock %}
+{% block content %}
+<div class="page-head">
+  <div>
+    <div class="eyebrow">{{ EMPRESA.nombre }}</div>
+    <h1 class="title">Modo <em>edición</em></h1>
+    <p class="meta">La versión publicada es de solo lectura. Para modificar datos ingresa la clave del grupo.</p>
+  </div>
+</div>
+<form class="panel" method="post" action="{{ url_for('login') }}" style="max-width:420px">
+  <div class="panel-body">
+    <div class="field">
+      <label for="clave">Clave de edición</label>
+      <input class="input" id="clave" name="clave" type="password" autocomplete="current-password" required autofocus>
+    </div>
+  </div>
+  <div class="form-foot">
+    <a class="btn btn-ghost" href="{{ url_for('roles_lista') }}">Volver</a>
+    <button class="btn btn-primary" type="submit">Entrar</button>
+  </div>
+</form>
+{% endblock %}

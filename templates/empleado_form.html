@@ -59,6 +59,38 @@
     </div>
 
     <div style="margin-top:28px;padding-top:24px;border-top:1px solid var(--line)">
+      <div class="eyebrow" style="margin-bottom:14px">Organización · alimenta el organigrama</div>
+      <div class="form-grid">
+        <div class="field span-4">
+          <label for="departamento">Departamento</label>
+          <select class="select" id="departamento" name="departamento">
+            {% for d in departamentos %}<option value="{{ d }}"{% if e and e.departamento == d %} selected{% endif %}>{{ d }}</option>{% endfor %}
+          </select>
+        </div>
+        <div class="field span-4">
+          <label for="reporta_a">Reporta a (jefe inmediato)</label>
+          <select class="select" id="reporta_a" name="reporta_a">
+            <option value="">— Nadie: máxima autoridad</option>
+            {% for j in jefes %}<option value="{{ j.id }}"{% if e and e.reporta_a|string == j.id|string %} selected{% endif %}>{{ j.nombres }} {{ j.apellidos }} · {{ j.cargo }}</option>{% endfor %}
+          </select>
+        </div>
+        <div class="field span-4">
+          <label for="estructura">Estructura ocupacional (tabla sectorial)</label>
+          <select class="select" id="estructura" name="estructura">
+            <option value="">Sin estructura · mínimo = SBU $ {{ P.sbu }}</option>
+            {% for cod, (desc, minimo) in escala.items() %}<option value="{{ cod }}"{% if e and e.estructura == cod %} selected{% endif %}>{{ desc }} · mín. $ {{ minimo|cifra }}</option>{% endfor %}
+          </select>
+          <div class="hint">El sueldo no puede ser menor al mínimo sectorial de la estructura del cargo.</div>
+        </div>
+        <div class="field span-12">
+          <label for="funcion">Función principal del cargo</label>
+          <input class="input" id="funcion" name="funcion" maxlength="200" value="{{ e.funcion if e else '' }}"
+                 placeholder="Ej.: Lidera el desarrollo de la plataforma y la integración con bases oficiales.">
+        </div>
+      </div>
+    </div>
+
+    <div style="margin-top:28px;padding-top:24px;border-top:1px solid var(--line)">
       <div class="eyebrow" style="margin-bottom:14px">Contrato y sueldo</div>
       <div class="form-grid">
         <div class="field span-4">

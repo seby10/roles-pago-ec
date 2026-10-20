@@ -11,14 +11,23 @@ from datetime import date
 from decimal import Decimal, InvalidOperation
 from pathlib import Path
 
-from flask import Flask, flash, g, redirect, render_template, request, send_file, url_for
+import hmac
+import secrets
+
+from flask import Flask, flash, g, redirect, render_template, request, send_file, session, url_for
 from markupsafe import Markup
 
 import calculos
 import exportar
 
 DB_PATH = Path(__file__).with_name("roles.db")
-EMPRESA = {"nombre": "FERIAUTO SAS", "ruc": "1790000000001", "region": "Sierra"}  # ficticia
+EMPRESA = {  # datos simulados del emprendimiento (proyecto académico)
+    "nombre": "FERIAUTO S.A.S.", "ruc": "1850001234001", "region": "Sierra", "regimen": "Código del Trabajo",
+    "cliente": "GAD Municipalidad de Ambato",
+    "ingreso_mensual": 3800,  # contrato B2G con el GAD (Canvas y dossier)
+    "otros_costos": 530,      # costos fijos 430 + variables 100 (Taller 05)
+}
+DEPARTAMENTOS = ["Gerencia General", "Tecnología", "Finanzas", "Marketing", "Operaciones"]
 # La región solo cambia la FECHA de pago del 14°, no el monto: Sierra/Amazonía hasta el 15 de agosto,
 # Costa/Galápagos hasta el 15 de marzo. El 13° se paga hasta el 24 de diciembre.
 MESES = ["", "Enero", "Febrero", "Marzo", "Abril", "Mayo", "Junio", "Julio",
@@ -39,7 +48,12 @@ CREATE TABLE IF NOT EXISTS empleados (
     mensualiza_decimos INTEGER NOT NULL DEFAULT 0,
     mensualiza_fondos INTEGER NOT NULL DEFAULT 1,  -- por ley los fondos se pagan mensualizados salvo pedido
     gastos_personales REAL NOT NULL DEFAULT 0,     -- proyección anual entregada al empleador (formulario SRI-GP)
-    cargas INTEGER NOT NULL DEFAULT 0 CHECK (cargas >= 0)
+    cargas INTEGER NOT NULL DEFAULT 0 CHECK (cargas >= 0),
+    -- organización: de aquí sale el organigrama
+    departamento TEXT NOT NULL DEFAULT '',
+    reporta_a INTEGER REFERENCES empleados(id),    -- jefe inmediato; NULL = máxima autoridad
+    funcion TEXT NOT NULL DEFAULT '',              -- función principal del cargo
+    estructura TEXT NOT NULL DEFAULT ''            -- estructura ocupacional de la tabla sectorial (fija el sueldo mínimo)
 );
 CREATE TABLE IF NOT EXISTS roles_cabecera (
     id INTEGER PRIMARY KEY,
@@ -75,20 +89,39 @@ CREATE TABLE IF NOT EXISTS roles_detalle (
 );
 """
 
-SCHEMA_VERSION = 2  # súbelo si cambias SCHEMA: la base vieja se respalda y se crea una nueva
+SCHEMA_VERSION = 3  # súbelo si cambias SCHEMA: la base vieja se respalda y se crea una nueva
 
-SEMILLA = [  # empleados de ejemplo (ficticios, cédulas con dígito verificador válido)
-    # cédula, nombres, apellidos, cargo, sueldo, ingreso, contrato, mensualiza 13°/14°, mensualiza F.R., gastos personales, cargas
-    ("1712345675", "María Fernanda", "López Andrade", "Contadora", 1500, "2024-01-15", "Indefinido", 0, 0, 0, 0),
-    ("0912345675", "Carlos Andrés", "Pérez Vera", "Vendedor", 650, "2025-03-01", "Indefinido", 1, 1, 0, 0),
-    ("0104567896", "Ana Lucía", "Torres Mena", "Asistente administrativa", 482, "2026-02-01", "Plazo fijo", 0, 1, 0, 0),
-    ("1309876546", "Jorge Luis", "Castillo Ruiz", "Gerente general", 3200, "2020-06-01", "Indefinido", 0, 1, 8000, 2),
+# Equipo de FERIAUTO: los 4 socios fundadores, contratados bajo el Código del Trabajo desde el inicio
+# de actividades (01-09-2026). Sueldos de arranque: sobre el mínimo sectorial A1 ($507,37) y con jerarquía
+# (Gerente General > directores); el mercado paga $1.200-1.800, pero el contrato con el GAD ($3.800) no lo cubre. Cédulas ficticias con dígito verificador válido.
+# reporta_a usa la posición en esta lista (1 = Gerente General).
+SEMILLA = [
+    # cédula, nombres, apellidos, cargo, sueldo, ingreso, contrato, mensualiza 13°/14°, mensualiza F.R.,
+    # gastos personales, cargas, departamento, reporta_a, función principal, estructura ocupacional
+    ("1712345675", "Sebastián", "Constante", "Gerente General", 550, "2026-09-01", "Indefinido", 0, 1, 0, 0,
+     "Gerencia General", None,
+     "Representa legalmente a la empresa, dirige la estrategia y negocia el contrato con el GAD de Ambato.", "A1"),
+    ("0912345675", "Pablo", "Montero", "Director de Tecnología", 530, "2026-09-01", "Indefinido", 0, 1, 0, 0,
+     "Tecnología", 1,
+     "Lidera el desarrollo de la plataforma, la integración con bases oficiales y la seguridad de los datos.", "A1"),
+    ("0104567896", "Daylé", "García", "Directora Financiera", 530, "2026-09-01", "Indefinido", 0, 1, 0, 0,
+     "Finanzas", 1,
+     "Administra presupuesto, nómina, facturación y obligaciones tributarias con el SRI y el IESS.", "A1"),
+    ("1309876546", "Jhanina", "Conterón", "Directora de Marketing", 530, "2026-09-01", "Indefinido", 0, 1, 0, 0,
+     "Marketing", 1,
+     "Posiciona la marca, gestiona la relación con comerciantes de la feria y la adopción de la app.", "A1"),
 ]
 CAMPOS_EMPLEADO = ("cedula", "nombres", "apellidos", "cargo", "sueldo", "fecha_ingreso", "tipo_contrato",
-                   "mensualiza_decimos", "mensualiza_fondos", "gastos_personales", "cargas")
+                   "mensualiza_decimos", "mensualiza_fondos", "gastos_personales", "cargas",
+                   "departamento", "reporta_a", "funcion", "estructura")
 
 app = Flask(__name__)
-app.secret_key = "demo-roles-pago"  # ponytail: solo para mensajes flash; no hay login
+# Publicación: si EDIT_PASSWORD está definida, la app queda en solo lectura y solo quien ingrese la clave
+# puede modificar datos. Sin la variable (uso local en clase) todo es editable, como siempre.
+EDIT_PASSWORD = os.environ.get("EDIT_PASSWORD", "")
+# La clave de sesión firma la cookie del modo edición: publicada, nunca puede ser la del repositorio.
+# Sin SECRET_KEY se genera una aleatoria (las sesiones se pierden al reiniciar el servidor, nada más).
+app.secret_key = os.environ.get("SECRET_KEY") or (secrets.token_hex(32) if EDIT_PASSWORD else "demo-roles-pago")
 
 
 # ------------------------------------------------------------------ base de datos
@@ -153,9 +186,38 @@ def fecha(iso):
     return f"{d.day} {MESES[d.month][:3].lower()} {d.year}"
 
 
+@app.before_request
+def solo_lectura():
+    """Con EDIT_PASSWORD, cualquier POST que cambie datos exige haber ingresado la clave."""
+    if (EDIT_PASSWORD and request.method == "POST" and not session.get("editor")
+            and request.endpoint not in ("login", "rol_preview")):  # la vista previa solo calcula
+        flash("Esta es una versión de solo lectura. Ingresa la clave de edición para hacer cambios.", "warning")
+        return redirect(url_for("login"))
+
+
+@app.route("/login", methods=["GET", "POST"])
+def login():
+    if not EDIT_PASSWORD:
+        return redirect(url_for("roles_lista"))
+    if request.method == "POST":
+        if hmac.compare_digest(request.form.get("clave", ""), EDIT_PASSWORD):
+            session["editor"] = True
+            flash("Modo edición activado.", "success")
+            return redirect(url_for("roles_lista"))
+        flash("Clave incorrecta.", "danger")
+    return render_template("login.html")
+
+
+@app.get("/logout")
+def logout():
+    session.pop("editor", None)
+    return redirect(url_for("roles_lista"))
+
+
 @app.context_processor
 def globales():
-    return dict(EMPRESA=EMPRESA, MESES=MESES, P={
+    return dict(EMPRESA=EMPRESA, MESES=MESES, SOLO_LECTURA=bool(EDIT_PASSWORD) and not session.get("editor"),
+                PUBLICADO=bool(EDIT_PASSWORD), P={
         "sbu": int(calculos.SBU), "iess_personal": "9,45%", "patronal": "11,15%",
         "iece_secap": "1%", "fondos": "8,33%", "canasta": cifra(calculos.CANASTA_2026),
         "canastas": calculos.CANASTAS_POR_CARGAS})
@@ -183,15 +245,17 @@ def numero(texto, defecto="0"):
 # ------------------------------------------------------------------ empleados (CRUD)
 @app.get("/empleados")
 def empleados_lista():
-    empleados = filas("SELECT * FROM empleados ORDER BY activo DESC, apellidos")
+    empleados = filas("SELECT * FROM empleados ORDER BY activo DESC, reporta_a IS NOT NULL, apellidos")
+    nombres = {e["id"]: f'{e["nombres"]} {e["apellidos"]}' for e in empleados}
     for e in empleados:
         e["antiguedad"] = antiguedad(e["fecha_ingreso"])
+        e["jefe"] = nombres.get(e["reporta_a"], "")
     return render_template("empleados.html", empleados=empleados)
 
 
 @app.get("/empleados/nuevo")
 def empleado_nuevo():
-    return render_template("empleado_form.html", e=None, tipos_contrato=TIPOS_CONTRATO, errores=[])
+    return render_template("empleado_form.html", **form_ctx(None, []))
 
 
 @app.get("/empleados/<int:id>/editar")
@@ -200,7 +264,26 @@ def empleado_editar(id):
     if not e:
         flash("Empleado no encontrado.", "danger")
         return redirect(url_for("empleados_lista"))
-    return render_template("empleado_form.html", e=e[0], tipos_contrato=TIPOS_CONTRATO, errores=[])
+    return render_template("empleado_form.html", **form_ctx(e[0], []))
+
+
+def genera_ciclo(empleado_id, jefe_id):
+    """True si poner a jefe_id como jefe de empleado_id cierra un ciclo (el jefe ya depende del empleado)."""
+    jefes = {r["id"]: r["reporta_a"] for r in filas("SELECT id, reporta_a FROM empleados")}
+    actual = jefe_id
+    while actual is not None:
+        if actual == empleado_id:
+            return True
+        actual = jefes.get(actual)
+    return False
+
+
+def form_ctx(e, errores):
+    """Contexto común del formulario de empleado (listas para los select)."""
+    otros = filas("SELECT id, nombres, apellidos, cargo FROM empleados WHERE id != ? ORDER BY apellidos",
+                  (int(e["id"]) if e and e.get("id") else 0,))
+    return dict(e=e, errores=errores, tipos_contrato=TIPOS_CONTRATO, departamentos=DEPARTAMENTOS,
+                jefes=otros, escala=calculos.ESCALA_SECTORIAL_2026)
 
 
 @app.post("/empleados/guardar")
@@ -208,7 +291,7 @@ def empleado_guardar():
     f = request.form
     e = {k: f.get(k, "").strip() for k in
          ("id", "cedula", "nombres", "apellidos", "cargo", "sueldo", "fecha_ingreso", "tipo_contrato",
-          "gastos_personales", "cargas")}
+          "gastos_personales", "cargas", "departamento", "reporta_a", "funcion", "estructura")}
     for k in ("activo", "mensualiza_decimos", "mensualiza_fondos"):
         e[k] = int(k in f)
 
@@ -235,6 +318,14 @@ def empleado_guardar():
             raise ValueError
     except ValueError:
         errores.append("Gastos personales y cargas familiares deben ser números ≥ 0.")
+    if e["departamento"] not in DEPARTAMENTOS:
+        errores.append("Elige un departamento.")
+    if e["estructura"] and e["estructura"] not in calculos.ESCALA_SECTORIAL_2026:
+        errores.append("Estructura ocupacional inválida.")
+    if e["reporta_a"] and e["reporta_a"] == e["id"]:
+        errores.append("Un empleado no puede reportarse a sí mismo.")
+    elif e["reporta_a"] and e["id"] and genera_ciclo(int(e["id"]), int(e["reporta_a"])):
+        errores.append("Esa línea de reporte crea un ciclo en el organigrama.")
 
     if not errores:
         campos = CAMPOS_EMPLEADO + ("activo",)
@@ -242,6 +333,7 @@ def empleado_guardar():
         valores[campos.index("sueldo")] = float(numero(e["sueldo"]))
         valores[campos.index("gastos_personales")] = float(numero(e["gastos_personales"]))
         valores[campos.index("cargas")] = int(e["cargas"] or 0)
+        valores[campos.index("reporta_a")] = int(e["reporta_a"]) if e["reporta_a"] else None
         try:
             with db():
                 if e["id"]:
@@ -256,7 +348,7 @@ def empleado_guardar():
             flash(f"Empleado {e['nombres']} {e['apellidos']} guardado.", "success")
             return redirect(url_for("empleados_lista"))
 
-    return render_template("empleado_form.html", e=e, tipos_contrato=TIPOS_CONTRATO, errores=errores)
+    return render_template("empleado_form.html", **form_ctx(e, errores))
 
 
 @app.post("/empleados/<int:id>/toggle")
@@ -271,6 +363,8 @@ def empleado_toggle(id):
 def empleado_eliminar(id):
     if db().execute("SELECT 1 FROM roles_detalle WHERE empleado_id = ? LIMIT 1", (id,)).fetchone():
         flash("No se puede eliminar: el empleado aparece en roles generados. Inactívalo en su lugar.", "warning")
+    elif db().execute("SELECT 1 FROM empleados WHERE reporta_a = ? LIMIT 1", (id,)).fetchone():
+        flash("No se puede eliminar: otros cargos le reportan. Cambia primero su jefe inmediato.", "warning")
     else:
         with db():
             db().execute("DELETE FROM empleados WHERE id = ?", (id,))
@@ -423,6 +517,59 @@ def rol_eliminar(id):
         db().execute("DELETE FROM roles_cabecera WHERE id = ?", (id,))
     flash("Rol eliminado.", "success")
     return redirect(url_for("roles_lista"))
+
+
+# ------------------------------------------------------------------ organigrama y tabla de remuneraciones
+def estructura_organizacional():
+    """Árbol de cargos (empleados activos) y tabla de remuneraciones por cargo, con el mismo cálculo del rol."""
+    hoy = date.today()
+    empleados = filas("SELECT * FROM empleados WHERE activo = 1 ORDER BY id")
+    activos = {e["id"] for e in empleados}
+
+    # Árbol: un empleado es raíz si no reporta a nadie o su jefe ya no está activo.
+    hijos = {}
+    for e in empleados:
+        hijos.setdefault(e["reporta_a"] if e["reporta_a"] in activos else None, []).append(e)
+
+    def rama(e):
+        return dict(e=e, jefe=e["reporta_a"] in activos, hijos=[rama(h) for h in hijos.get(e["id"], [])])
+    raices = [rama(e) for e in hijos.get(None, [])]
+
+    # Tabla: una fila por cargo y sueldo (si dos personas comparten cargo y sueldo, se suman como n = 2).
+    tabla = {}
+    for e in empleados:
+        r = calculos.calcular_rol(e, dict(dias=30), hoy.year, hoy.month)
+        fila = tabla.setdefault((e["cargo"], e["sueldo"]), dict(
+            cargo=e["cargo"], departamento=e["departamento"], sueldo=e["sueldo"],
+            estructura=calculos.ESCALA_SECTORIAL_2026.get(e["estructura"], ("",))[0],
+            minimo=float(calculos.minimo_sectorial(e["estructura"])) if e["estructura"] else 0,
+            n=0, sueldo_total=0, iess_personal=0, patronal=0, p13=0, p14=0, p_vac=0, p_fondos=0, costo=0,
+            fondos_futuros=0))
+        fila["n"] += 1
+        for k, v in (("sueldo_total", r["sueldo_ganado"]), ("iess_personal", r["iess_personal"]),
+                     ("patronal", r["patronal"] + r["iece_secap"]), ("p13", r["p13"]), ("p14", r["p14"]),
+                     ("p_vac", r["p_vac"]), ("p_fondos", r["p_fondos"]), ("costo", r["costo_total"]),
+                     ("fondos_futuros", 0 if r["tiene_fondos"] else round(r["total_gravado"] * 0.0833, 2))):
+            fila[k] = round(fila[k] + v, 2)
+    tabla = list(tabla.values())
+    return dict(raices=raices, tabla=tabla, anio=hoy.year, mes=hoy.month,
+                costo_personal=round(sum(t["costo"] for t in tabla), 2),
+                fondos_futuros=round(sum(t["fondos_futuros"] for t in tabla), 2),
+                ingreso=min((e["fecha_ingreso"] for e in empleados), default=None))
+
+
+@app.get("/organigrama")
+def organigrama():
+    return render_template("organigrama.html", **estructura_organizacional())
+
+
+@app.get("/organigrama/excel")
+def organigrama_excel():
+    """Tabla de remuneraciones con fórmulas vivas (PEA 3): cambia sueldo o n.º y todo se recalcula."""
+    datos = estructura_organizacional()
+    contenido = exportar.libro_remuneraciones(datos["tabla"], EMPRESA, calculos)
+    return send_file(io.BytesIO(contenido), as_attachment=True, download_name="tabla_remuneraciones_feriauto.xlsx",
+                     mimetype="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")
 
 
 @app.post("/demo/reiniciar")
