@@ -8,48 +8,40 @@ Módulo demostrativo para un taller de clase: calcula el rol de pagos mensual de
 
 ## 1. Cómo ejecutar
 
-Solo necesitas **Python 3.9 o superior** ([python.org/downloads](https://www.python.org/downloads/); en Windows marca *"Add python.exe to PATH"* al instalar). Cada persona corre la app en su propia compu con su propia base de datos.
-
-**Paso 1 — Descargar** (recomendado con git, así luego actualizas con un comando):
+Requisito: **Python 3.9+**. La app corre en local y cada quien tiene su propia base de datos (`roles.db`), así que nadie pisa los datos de otro.
 
 ```bash
 git clone https://github.com/seby10/roles-pago-ec.git
 cd roles-pago-ec
 ```
 
-El repositorio es privado: acepta primero la invitación que llega a tu correo de GitHub. La primera vez git te pedirá iniciar sesión (en Windows se abre el navegador; en macOS/Linux puedes usar `gh auth login`). Para traer cambios nuevos: `git pull` dentro de la carpeta.
+Luego, según tu sistema:
 
-¿Sin git? En la página del repo: botón verde **Code → Download ZIP** y descomprimir (para actualizar hay que volver a descargarlo).
+- **Windows:** doble clic en `iniciar.bat`.
+- **macOS / Linux:** `sh iniciar.sh`.
 
-**Paso 2 — Abrir.**
+El script crea un entorno virtual (`.venv`) con las dependencias del proyecto (Flask y openpyxl) para no tocar tu Python global, y abre **http://127.0.0.1:5050**. La primera vez tarda unos segundos porque descarga esas dependencias; después arranca directo. Se detiene con `Ctrl+C`.
 
-| Sistema | Qué hacer |
-| --- | --- |
-| Windows | Doble clic en **`iniciar.bat`** |
-| macOS / Linux | En una terminal dentro de la carpeta: `sh iniciar.sh` |
+Para traer cambios del repositorio: `git pull`.
 
-La primera vez tarda ~30 s (crea un entorno `.venv` e instala Flask y openpyxl; necesita internet). Luego se abre solo el navegador en **http://127.0.0.1:5050**. Para cerrar, cierra la ventana de la terminal o presiona `Ctrl+C`.
-
-**Manual (si prefieres):**
+Si prefieres hacerlo a mano:
 
 ```bash
 pip install -r requirements.txt
 python app.py          # http://127.0.0.1:5050
-python calculos.py     # self-check: imprime "OK: ..." si los casos resueltos a mano cuadran
+python calculos.py     # verifica los cálculos contra casos resueltos a mano
 ```
 
-**Reiniciar la demo:** enlace *Reiniciar demo* en el pie de página (vuelve a los 4 empleados de ejemplo y borra los roles). También puedes borrar `roles.db`; se recrea sola.
+Para volver a los datos de ejemplo usa **Reiniciar demo**, en el pie de página. Borrar `roles.db` tiene el mismo efecto.
 
-**Problemas comunes**
-
-| Síntoma | Solución |
+| Si pasa esto | Prueba |
 | --- | --- |
-| "Necesitas Python 3.9 o superior" | Instala Python y, en Windows, reinstala marcando *Add python.exe to PATH*. |
-| Linux: error al crear `.venv` | `sudo apt install python3-venv` y vuelve a ejecutar. |
-| "Address already in use" | Otra app usa el puerto. Ejecuta con otro: `PORT=5051 python app.py` (Windows: `set PORT=5051 && python app.py`). |
-| Se ve con otra tipografía | Sin internet no cargan las fuentes de Google; la app funciona igual con las del sistema. |
+| El script dice que falta Python | En Windows, Python debe estar en el PATH (es una casilla del instalador). |
+| Linux no puede crear `.venv` | `sudo apt install python3-venv` |
+| "Address already in use" | Otro programa usa el 5050: `PORT=5051 python app.py` (en Windows: `set PORT=5051 && python app.py`). |
+| La tipografía se ve distinta | Las fuentes vienen de Google Fonts; sin internet se usan las del sistema y todo funciona igual. |
 
-> ¿Por qué no está publicada en Vercel? Vercel ejecuta funciones sin disco persistente: la base SQLite se perdería entre peticiones y todos compartirían los mismos datos. Para un taller conviene que cada estudiante tenga su copia local.
+> **¿Por qué no está en Vercel?** Vercel no guarda archivos entre peticiones: la base SQLite se perdería y además todos compartirían los mismos datos. Para un taller tiene más sentido que cada uno corra su copia.
 
 ---
 
