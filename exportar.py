@@ -15,6 +15,8 @@ from openpyxl.styles import Alignment, Border, Font, PatternFill, Side
 from openpyxl.workbook.defined_name import DefinedName
 from openpyxl.worksheet.datavalidation import DataValidation
 
+from calculos import TABLA_IR_2026
+
 FILA_TABLA = 5  # encabezados de la tabla; filas 1-3 son el membrete de la empresa
 FONDO = PatternFill("solid", fgColor="F2F0EA")
 AMARILLO = PatternFill("solid", fgColor="FFF6D6")   # celdas editables
@@ -80,8 +82,8 @@ def _hoja(wb, titulo, empresa, subtitulo, columnas, detalles, color=None):
     return ws
 
 
-def libro_rol(cab, detalles, empresa, mes_nombre):
-    """Devuelve el .xlsx del rol (bytes) listo para enviar con Flask."""
+def libro_rol(cab, detalles, empresa, mes_nombre, P):
+    """Devuelve el .xlsx del rol (bytes) listo para enviar con Flask. P: porcentajes con que se generó el rol."""
     anio = cab["anio"]
     sub = f"RUC {empresa['ruc']} · Rol de pagos {mes_nombre} {anio}"
     ced = ("Cédula", lambda d: str(d["cedula"]), "txt")
@@ -93,11 +95,11 @@ def libro_rol(cab, detalles, empresa, mes_nombre):
 
     _hoja(wb, "Rol de pagos", empresa, sub, [
         ced, emp, ("Cargo", lambda d: d["cargo"], "txt"), ("Días", lambda d: d["dias"], "int"),
-        col("Sueldo ganado", "sueldo_ganado"), col("Horas 50%", "v_h50"), col("Horas 100%", "v_h100"),
+        col("Sueldo ganado", "sueldo_ganado"), col("Horas suplementarias", "v_h50"), col("Horas extraordinarias", "v_h100"),
         col("Comisiones", "comisiones"), col("Total gravado", "total_gravado"),
         col("Décimo 13° mensual", "decimo13_pagado"), col("Décimo 14° mensual", "decimo14_pagado"),
         col("Fondos de reserva", "fondos_pagado"), col("Total ingresos", "total_ingresos"),
-        col("Aporte IESS 9,45%", "iess_personal"), col("Retención IR", "ir"),
+        col(f"Aporte IESS {P['iess_personal']}", "iess_personal"), col("Retención IR", "ir"),
         col("Anticipos", "anticipos"), col("Préstamo IESS", "prestamos_iess"),
         col("Total descuentos", "total_descuentos"), col("NETO A RECIBIR", "neto"),
     ], detalles, color=(19, "1D6A4E"))
@@ -105,14 +107,14 @@ def libro_rol(cab, detalles, empresa, mes_nombre):
     _hoja(wb, "Costo empleador", empresa, sub, [
         ced, emp, col("Total gravado", "total_gravado"), col("Décimo 13°", "p13"),
         col("Décimo 14°", "p14"), col("Vacaciones", "p_vac"), col("Fondos de reserva", "p_fondos"),
-        col("Aporte patronal 11,15%", "patronal"), col("IECE 0,5% + SECAP 0,5%", "iece_secap"),
+        col(f"Aporte patronal {P['patronal']}", "patronal"), col(f"IECE {P['iece']} + SECAP {P['secap']}", "iece_secap"),
         col("Total provisiones y aportes", "total_provisiones"), col("COSTO TOTAL", "costo_total"),
     ], detalles, color=(11, "3E4A7C"))
 
     _hoja(wb, "Planilla IESS", empresa, sub, [
         ced, emp, col("Total gravado (base de aportación)", "total_gravado"),
-        col("Aporte personal 9,45%", "iess_personal"), col("Aporte patronal 11,15%", "patronal"),
-        col("IECE + SECAP 1%", "iece_secap"),
+        col(f"Aporte personal {P['iess_personal']}", "iess_personal"), col(f"Aporte patronal {P['patronal']}", "patronal"),
+        col(f"IECE + SECAP {P['iece_secap']}", "iece_secap"),
         ("Total a pagar al IESS", lambda d: "=D{r}+E{r}+F{r}", "num"),   # fórmula por fila
         # los fondos solo se depositan en el IESS si el trabajador los acumula (no los mensualiza)
         ("Fondos de reserva a depositar en IESS",
@@ -136,7 +138,7 @@ def _membrete(ws, empresa):
     ws["A1"] = empresa["nombre"]
     ws["A1"].font = Font(bold=True, size=14)
     ws["A2"] = f"RUC {empresa['ruc']}"
-    ws["A3"] = "Régimen: Código del Trabajo · Tabla de remuneraciones 2026"
+    ws["A3"] = f"Régimen: {empresa.get('reg', {}).get('nombre', 'Código del Trabajo')} · Tabla de remuneraciones 2026"
     ws["A3"].font = Font(italic=True, color="666666")
 
 
@@ -150,72 +152,80 @@ def _encabezados(ws, fila, titulos, anchos):
     ws.row_dimensions[fila].height = 45
 
 
-def libro_remuneraciones(tabla, empresa, calc):
+def libro_remuneraciones(tabla, empresa, p, P):
     """
     Devuelve el .xlsx (bytes) de la tabla de remuneraciones con FÓRMULAS vivas (PEA 3, requisito 4):
     al cambiar una remuneración, el n.º de trabajadores o un parámetro, todo se recalcula en Excel.
+    p: parámetros de cálculo (Decimal) · P: los mismos como texto para los títulos.
     Hojas: Parámetros (celdas con nombre) · Tabla de remuneraciones · Cálculo detallado (1 trabajador).
     """
     wb = Workbook()
 
     # ---------------------------------------------------------------- 1. Parámetros
-    p = wb.active
-    p.title = "Parámetros"
-    _membrete(p, empresa)
-    p["A5"] = "Cambie los valores amarillos y todo se recalcula"
-    p["A5"].font = Font(bold=True, color="8A6D00")
-    _encabezados(p, 7, ["Parámetro", "Valor", "Detalle"], [38, 16, 62])
+    hp = wb.active
+    hp.title = "Parámetros"
+    _membrete(hp, empresa)
+    hp["A5"] = "Cambie los valores amarillos y todo se recalcula"
+    hp["A5"].font = Font(bold=True, color="8A6D00")
+    _encabezados(hp, 7, ["Parámetro", "Valor", "Detalle"], [38, 16, 62])
     parametros = [   # (nombre del rango, etiqueta, valor, formato, detalle)
-        ("SBU", "Salario Básico Unificado 2026", calc.SBU, "#,##0.00", "Base del décimo 14° (SBU ÷ 12)"),
-        ("P_PERSONAL", "Aporte personal IESS", calc.IESS_PERSONAL, "0.00%", "Se descuenta al trabajador"),
-        ("P_PATRONAL", "Aporte patronal IESS", calc.IESS_PATRONAL, "0.00%", "Lo paga la empresa"),
-        ("P_IECE_SECAP", "IECE + SECAP", calc.IECE_SECAP, "0.00%", "Adicional al patronal: 11,15 % + 1 % = 12,15 %"),
-        ("P_FONDOS", "Fondos de reserva", calc.FONDOS_RESERVA, "0.00%", "Desde el mes 13 de trabajo"),
+        ("SBU", "Salario Básico Unificado 2026", p["sbu"], "#,##0.00", "Base del décimo 14° (SBU ÷ 12)"),
+        ("P_PERSONAL", "Aporte personal IESS", p["iess_personal"], "0.00%", "Se descuenta al trabajador"),
+        ("P_PATRONAL", "Aporte patronal IESS", p["iess_patronal"], "0.00%", "Lo paga la empresa"),
+        ("P_IECE_SECAP", "IECE + SECAP", p["iece"] + p["secap"], "0.00%",
+         f"Adicional al patronal: total {P['patronal_total']}"),
+        ("P_FONDOS", "Fondos de reserva", p["fondos"], "0.00%", "Desde el mes 13 de trabajo"),
+        ("DIAS_VACACIONES", "Días de vacaciones al año", p["dias_vacaciones"], "0",
+         "Provisión mensual = remuneración × días ÷ 360"),
         ("INGRESO_MENSUAL", "Ingreso mensual del contrato con el GAD", empresa["ingreso_mensual"], "#,##0.00", "USD por mes"),
         ("OTROS_COSTOS", "Otros costos mensuales", empresa["otros_costos"], "#,##0.00", "USD por mes (sin personal)"),
     ]
     for i, (nombre, etiqueta, valor, fmt, detalle) in enumerate(parametros, start=8):
-        p.cell(i, 1, etiqueta)
-        c = p.cell(i, 2, float(valor))
+        hp.cell(i, 1, etiqueta)
+        c = hp.cell(i, 2, float(valor))
         c.number_format, c.fill, c.border = fmt, AMARILLO, Border(bottom=FINO)
-        p.cell(i, 3, detalle).font = Font(italic=True, color="666666")
+        hp.cell(i, 3, detalle).font = Font(italic=True, color="666666")
         wb.defined_names[nombre] = DefinedName(nombre, attr_text=f"'Parámetros'!$B${i}")
 
     fila_ir = 8 + len(parametros) + 1
-    p.cell(fila_ir, 1, "Tabla del impuesto a la renta 2026 (personas naturales)").font = Font(bold=True)
+    hp.cell(fila_ir, 1, "Tabla del impuesto a la renta 2026 (personas naturales)").font = Font(bold=True)
     for j, t in enumerate(["Desde", "Hasta", "Impuesto fracción básica", "% sobre el excedente"], start=1):
-        c = p.cell(fila_ir + 1, j, t)
+        c = hp.cell(fila_ir + 1, j, t)
         c.font, c.fill, c.border = Font(bold=True), FONDO, Border(bottom=FINO)
         c.alignment = Alignment(wrap_text=True, horizontal="left" if j == 1 else "right")
-    for i, (desde, hasta, imp, pct) in enumerate(calc.TABLA_IR_2026, start=fila_ir + 2):
+    for i, (desde, hasta, imp, pct) in enumerate(TABLA_IR_2026, start=fila_ir + 2):
         for j, (v, fmt) in enumerate([(desde, "#,##0.00"), (hasta, "#,##0.00"), (imp, "#,##0.00"), (pct, "0.00%")], 1):
-            c = p.cell(i, j, "en adelante" if v is None else float(v))
+            c = hp.cell(i, j, "en adelante" if v is None else float(v))
             c.number_format = fmt
             c.alignment = Alignment(horizontal="right")
-    ini, fin = fila_ir + 2, fila_ir + 1 + len(calc.TABLA_IR_2026)
+    ini, fin = fila_ir + 2, fila_ir + 1 + len(TABLA_IR_2026)
     wb.defined_names["TABLA_IR"] = DefinedName("TABLA_IR", attr_text=f"'Parámetros'!$A${ini}:$D${fin}")
-    p.column_dimensions["D"].width = 22
-    p.freeze_panes = "A8"
+    hp.column_dimensions["D"].width = 22
+    hp.freeze_panes = "A8"
 
     # ---------------------------------------------------------------- 2. Tabla de remuneraciones
     t = wb.create_sheet("Tabla de remuneraciones")
     _membrete(t, empresa)
     ini, fin = FILA_TABLA + 1, FILA_TABLA + len(tabla)       # filas de datos
+    columna = empresa.get("reg", {}).get("columna", "Mínimo sectorial")
+    # sin grado (D = 0) se compara con el SBU; la regla depende del régimen
+    cumple = {"minimo": '=IF(F{r}>=MAX(D{r},SBU),"Sí","NO")', "fija": '=IF(OR(D{r}=0,F{r}=D{r}),"Sí","NO")',
+              "techo": '=IF(OR(D{r}=0,F{r}<=D{r}),"Sí","NO")'}[p["regla"]]
     tot = fin + 1
     # (título, ancho, formato, valor | fórmula con {r}); E, F y M son las entradas (amarillo)
     cols = [
         ("Cargo", 34, "@", lambda d: d["cargo"]),
         ("Departamento", 18, "@", lambda d: d["departamento"]),
-        ("Estructura ocupacional", 34, "@", lambda d: d["estructura"] or ""),
-        ("Mínimo sectorial", 12, "#,##0.00", lambda d: d["minimo"]),
+        ("Escala / grado", 34, "@", lambda d: d["estructura"] or ""),
+        (columna, 12, "#,##0.00", lambda d: d["minimo"]),
         ("N.º trabajadores", 12, "0", lambda d: d["n"]),
         ("Remuneración mensual", 14, "#,##0.00", lambda d: d["sueldo"]),
-        ("¿Cumple mínimo?", 11, "General", '=IF(F{r}>=D{r},"Sí","NO")'),
+        ("¿Cumple la escala?", 11, "General", cumple),
         ("Aporte personal IESS", 13, "#,##0.00", "=ROUND(F{r}*P_PERSONAL,2)"),
-        ("Aporte patronal IESS 12,15 %", 14, "#,##0.00", "=ROUND(F{r}*P_PATRONAL,2)+ROUND(F{r}*P_IECE_SECAP,2)"),
+        (f"Aporte patronal IESS {P['patronal_total']}", 14, "#,##0.00", "=ROUND(F{r}*P_PATRONAL,2)+ROUND(F{r}*P_IECE_SECAP,2)"),
         ("Décimo 13°", 12, "#,##0.00", "=ROUND(F{r}/12,2)"),
         ("Décimo 14°", 12, "#,##0.00", "=ROUND(SBU/12,2)"),
-        ("Vacaciones", 12, "#,##0.00", "=ROUND(F{r}/24,2)"),
+        ("Vacaciones", 12, "#,##0.00", "=ROUND(F{r}*DIAS_VACACIONES/360,2)"),
         ("¿Fondos de reserva?", 11, "General", lambda d: "No"),   # ingresan el 01-09-2026: aún no cumplen el mes 13
         ("Fondos de reserva", 13, "#,##0.00", '=IF(M{r}="Sí",ROUND(F{r}*P_FONDOS,2),0)'),
         ("Costo mensual por trabajador", 15, "#,##0.00", "=F{r}+I{r}+J{r}+K{r}+L{r}+N{r}"),
@@ -279,7 +289,7 @@ def libro_remuneraciones(tabla, empresa, calc):
     T = "'Tabla de remuneraciones'!"
     pasos = [   # (concepto, explicación, fórmula, formato); C6 = remuneración, C7 = aporte personal, C8 = base IR...
         ("Remuneración mensual", "Dato de la tabla de remuneraciones", f"={T}F{ini}", "#,##0.00"),
-        ("Aporte personal IESS 9,45 %", "Remuneración × 9,45 %", f"={T}H{ini}", "#,##0.00"),
+        (f"Aporte personal IESS {P['iess_personal']}", f"Remuneración × {P['iess_personal']}", f"={T}H{ini}", "#,##0.00"),
         ("Ingreso gravado anual proyectado", "(Remuneración − aporte personal) × 12", "=ROUND((C6-C7)*12,2)", "#,##0.00"),
         ("Fracción básica (desde)", "Límite inferior del tramo de la tabla IR", "=VLOOKUP(C8,TABLA_IR,1,TRUE)", "#,##0.00"),
         ("Impuesto de la fracción básica", "Impuesto fijo del tramo", "=VLOOKUP(C8,TABLA_IR,3,TRUE)", "#,##0.00"),
@@ -287,11 +297,11 @@ def libro_remuneraciones(tabla, empresa, calc):
         ("Impuesto a la renta anual", "Impuesto fracción + (base − desde) × %", "=ROUND(C10+(C8-C9)*C11,2)", "#,##0.00"),
         ("Retención mensual de IR", "IR anual ÷ 12", "=ROUND(C12/12,2)", "#,##0.00"),
         ("NETO A RECIBIR", "Remuneración − aporte personal − retención IR", "=C6-C7-C13", "#,##0.00"),
-        ("Aporte patronal 12,15 %", "Remuneración × (11,15 % + 1 % IECE/SECAP)", f"={T}I{ini}", "#,##0.00"),
+        (f"Aporte patronal {P['patronal_total']}", f"Remuneración × ({P['patronal']} + {P['iece_secap']} IECE/SECAP)", f"={T}I{ini}", "#,##0.00"),
         ("Décimo tercero", "Remuneración ÷ 12", f"={T}J{ini}", "#,##0.00"),
         ("Décimo cuarto", "SBU ÷ 12", f"={T}K{ini}", "#,##0.00"),
-        ("Vacaciones", "Remuneración ÷ 24", f"={T}L{ini}", "#,##0.00"),
-        ("Fondos de reserva", "Remuneración × 8,33 % (solo si aplica)", f"={T}N{ini}", "#,##0.00"),
+        ("Vacaciones", f"Remuneración × {P['dias_vacaciones']} días ÷ 360", f"={T}L{ini}", "#,##0.00"),
+        ("Fondos de reserva", f"Remuneración × {P['fondos']} (solo si aplica)", f"={T}N{ini}", "#,##0.00"),
         ("COSTO MENSUAL PARA LA EMPRESA", "Remuneración + patronal + provisiones", "=C6+SUM(C15:C19)", "#,##0.00"),
         ("Costo anual", "Costo mensual × 12", "=C20*12", "#,##0.00"),
         ("Factor de costo", "Costo mensual ÷ remuneración", "=C20/C6", "0.00"),
@@ -316,19 +326,23 @@ def libro_remuneraciones(tabla, empresa, calc):
 
 if __name__ == "__main__":
     from openpyxl import load_workbook
+    import calculos
     from calculos import calcular_rol
+
+    P = dict(iess_personal="9,45%", patronal="11,15%", iece="0,5%", secap="0,5%", iece_secap="1%",
+             patronal_total="12,15%", fondos="8,33%", dias_vacaciones=15)
 
     empresa = {"nombre": "FERIAUTO SAS", "ruc": "1790000000001"}
     base = dict(nombres="María", apellidos="López", cargo="Vendedora", sueldo=1500,
-                fecha_ingreso="2024-01-15", mensualiza_decimos=0, mensualiza_fondos=0)
+                fecha_ingreso="2024-01-15", mensualiza_13=0, mensualiza_14=0, mensualiza_fondos=0)
     emps = [dict(base, cedula="0912345675"),
             dict(base, cedula="1710034065", nombres="Juan", apellidos="Pérez", sueldo=800,
-                 mensualiza_decimos=1, mensualiza_fondos=1)]
+                 mensualiza_13=1, mensualiza_14=1, mensualiza_fondos=1)]
     novs = [dict(dias=30, h50=10, comisiones=200), dict(dias=30, anticipos=50)]
     detalles = [calcular_rol(e, n, 2026, 10) for e, n in zip(emps, novs)]
     cab = dict(anio=2026, mes=10)
 
-    datos = libro_rol(cab, detalles, empresa, "Octubre")
+    datos = libro_rol(cab, detalles, empresa, "Octubre", P)
     wb = load_workbook(io.BytesIO(datos))
 
     assert wb.sheetnames == ["Rol de pagos", "Costo empleador", "Planilla IESS", "Transferencias"]
@@ -352,24 +366,24 @@ if __name__ == "__main__":
     print("OK exportar")
 
     # ---- libro de remuneraciones: 4 cargos ficticios, estructura y fórmulas
-    import calculos
     from decimal import Decimal
     cargos = [("Gerente General", 1200), ("Director Comercial", 1000),
               ("Director Financiero", 1000), ("Director de Operaciones", 1000)]
     tabla = [dict(cargo=c, departamento="Directivo", estructura="", minimo=600, n=1, sueldo=s) for c, s in cargos]
     emp2 = dict(empresa, nombre="FERIAUTO S.A.S.", regimen="Código del Trabajo", cliente="GAD",
                 ingreso_mensual=3800, otros_costos=530)
-    wb = load_workbook(io.BytesIO(libro_remuneraciones(tabla, emp2, calculos)))
+    p = calculos.parametros_defecto("CT")
+    wb = load_workbook(io.BytesIO(libro_remuneraciones(tabla, emp2, p, P)))
 
     assert wb.sheetnames == ["Parámetros", "Tabla de remuneraciones", "Cálculo detallado"]
     assert wb.active.title == "Tabla de remuneraciones" and wb.properties.creator == "FERIAUTO S.A.S."
     nombres = {"SBU": "$B$8", "P_PERSONAL": "$B$9", "P_PATRONAL": "$B$10", "P_IECE_SECAP": "$B$11",
-               "P_FONDOS": "$B$12", "INGRESO_MENSUAL": "$B$13", "OTROS_COSTOS": "$B$14"}
+               "P_FONDOS": "$B$12", "DIAS_VACACIONES": "$B$13", "INGRESO_MENSUAL": "$B$14", "OTROS_COSTOS": "$B$15"}
     for n, celda in nombres.items():
         assert wb.defined_names[n].attr_text == "'Parámetros'!" + celda, n
-    assert wb.defined_names["TABLA_IR"].attr_text == "'Parámetros'!$A$18:$D$27"
+    assert wb.defined_names["TABLA_IR"].attr_text == "'Parámetros'!$A$19:$D$28"
     par = wb["Parámetros"]
-    assert par["B8"].value == 482 and par["B9"].value == 0.0945 and par["B13"].value == 3800
+    assert par["B8"].value == 482 and par["B9"].value == 0.0945 and par["B14"].value == 3800
     assert par["B8"].fill.fgColor.rgb.endswith("FFF6D6")
 
     ws = wb["Tabla de remuneraciones"]
@@ -377,8 +391,8 @@ if __name__ == "__main__":
     assert ws["A3"].value == "Régimen: Código del Trabajo · Tabla de remuneraciones 2026"
     assert ws.freeze_panes == "B6" and ws["E6"].value == 1 and ws["F6"].value == 1200 and ws["M6"].value == "No"
     for r in range(6, 10):                                   # cada celda de cálculo es fórmula y cita las entradas
-        esperado = {"G": f'=IF(F{r}>=D{r},"Sí","NO")', "H": f"=ROUND(F{r}*P_PERSONAL,2)",
-                    "I": f"=ROUND(F{r}*P_PATRONAL,2)+ROUND(F{r}*P_IECE_SECAP,2)", "J": f"=ROUND(F{r}/12,2)", "K": "=ROUND(SBU/12,2)", "L": f"=ROUND(F{r}/24,2)",
+        esperado = {"G": f'=IF(F{r}>=MAX(D{r},SBU),"Sí","NO")', "H": f"=ROUND(F{r}*P_PERSONAL,2)",
+                    "I": f"=ROUND(F{r}*P_PATRONAL,2)+ROUND(F{r}*P_IECE_SECAP,2)", "J": f"=ROUND(F{r}/12,2)", "K": "=ROUND(SBU/12,2)", "L": f"=ROUND(F{r}*DIAS_VACACIONES/360,2)",
                     "N": f'=IF(M{r}="Sí",ROUND(F{r}*P_FONDOS,2),0)', "O": f"=F{r}+I{r}+J{r}+K{r}+L{r}+N{r}", "P": f"=O{r}*E{r}"}
         for col, f in esperado.items():
             assert ws[f"{col}{r}"].value == f, f"{col}{r}: {ws[f'{col}{r}'].value}"
@@ -397,7 +411,7 @@ if __name__ == "__main__":
     sueldo = Decimal(1200)
     costo_gg = sueldo * (1 + Decimal("0.1215")) + 100 + Decimal(482) / 12 + 50
     assert abs(float(costo_gg) - (1200 * 1.1215 + 100 + 40.1667 + 50)) < 0.001
-    base = (sueldo - sueldo * calculos.IESS_PERSONAL) * 12
+    base = (sueldo - sueldo * p["iess_personal"]) * 12
     ir_anual = calculos.impuesto_renta_anual(base)[0]
     print(f"OK libro_remuneraciones (estructura y fórmulas). Esperado GG: costo {costo_gg:.2f}, retención IR {ir_anual / 12:.2f}")
 
@@ -409,7 +423,7 @@ if __name__ == "__main__":
     else:
         with tempfile.TemporaryDirectory() as d:
             ruta = os.path.join(d, "t.xlsx")
-            open(ruta, "wb").write(libro_remuneraciones(tabla, emp2, calculos))
+            open(ruta, "wb").write(libro_remuneraciones(tabla, emp2, p, P))
             subprocess.run([soffice, "--headless", "--convert-to", "xlsx", "--outdir", os.path.join(d, "out"), ruta],
                            check=True, capture_output=True, timeout=120)
             v = load_workbook(os.path.join(d, "out", "t.xlsx"), data_only=True)

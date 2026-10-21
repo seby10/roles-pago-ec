@@ -6,12 +6,16 @@
 {# Un nodo del organigrama y, debajo, quienes le reportan (recursivo). #}
 {% macro nodo(p) %}
   <li>
-    <a class="org-node{% if not p.jefe %} org-node--top{% endif %}" href="{{ url_for('empleado_editar', id=p.e.id) }}">
+    <a class="org-node org-node--n{{ [p.nivel, 3]|min }}{% if not p.jefe %} org-node--top{% endif %}" href="{{ url_for('empleado_editar', id=p.e.id) }}">
       <span class="org-dep">{{ p.e.departamento }}</span>
       <span class="org-cargo">{{ p.e.cargo }}</span>
       <span class="org-nombre">{{ p.e.nombres }} {{ p.e.apellidos }}</span>
       {% if p.e.funcion %}<span class="org-funcion">{{ p.e.funcion }}</span>{% endif %}
-      <span class="org-pie">1 trabajador · {{ p.e.sueldo|money }}</span>
+      <span class="org-pie">
+        <span>{% if p.e.estructura %}<b>{{ p.e.estructura }}</b> · {% endif %}{{ p.e.sueldo|money }}</span>
+        {% if p.e.avisos %}<span class="tag tag--warn" title="{{ p.e.avisos|join('; ') }}">revisar escala</span>
+        {% elif p.e.estructura %}<span class="tag tag--neto" title="{{ p.e.grado[0] }} · {{ REG.columna }} $ {{ p.e.grado[1]|cifra }}">cumple</span>{% endif %}
+      </span>
     </a>
     {% if p.hijos %}<ul>{% for h in p.hijos %}{{ nodo(h) }}{% endfor %}</ul>{% endif %}
   </li>
@@ -21,7 +25,7 @@
   <div>
     <div class="eyebrow">{{ EMPRESA.nombre }} · RUC {{ EMPRESA.ruc }}</div>
     <h1 class="title">Organigrama <em>funcional</em></h1>
-    <p class="meta"><b>{{ tabla|length }}</b> cargo{{ '' if tabla|length == 1 else 's' }} · <b>{{ tabla|sum(attribute='n') }}</b> trabajadores · régimen {{ EMPRESA.regimen }}</p>
+    <p class="meta"><b>{{ tabla|length }}</b> cargo{{ '' if tabla|length == 1 else 's' }} · <b>{{ tabla|sum(attribute='n') }}</b> trabajadores · régimen {{ REG.nombre }} · escala {{ REG.escala|lower }}</p>
   </div>
   <div class="actions no-print">
     <a class="btn" href="{{ url_for('organigrama_excel') }}" download>Exportar Excel</a>
@@ -60,10 +64,10 @@
         <tr>
           <th class="first">Cargo</th>
           <th class="n">N.º</th>
-          <th class="n">Mínimo sectorial</th>
+          <th class="n">{{ REG.columna }}</th>
           <th class="n">Remuneración mensual</th>
-          <th class="n sep">Aporte personal IESS 9,45%</th>
-          <th class="n">Aporte patronal IESS 12,15%</th>
+          <th class="n sep">Aporte personal IESS {{ P.iess_personal }}</th>
+          <th class="n">Aporte patronal IESS {{ P.patronal_total }}</th>
           <th class="n sep">Décimo 13°</th>
           <th class="n">Décimo 14°</th>
           <th class="n">Vacaciones</th>
@@ -76,10 +80,10 @@
         <tr>
           <td class="first"><span class="person">{{ t.cargo }}</span><div class="sub">{{ t.departamento }}{% if t.estructura %} · {{ t.estructura }}{% endif %}</div></td>
           <td class="n" data-label="N.º trabajadores">{{ t.n }}</td>
-          <td class="n" data-label="Mínimo sectorial">{% if t.minimo %}{{ t.minimo|cifra }}{% if t.sueldo < t.minimo %} <span class="tag tag--warn">bajo el mínimo</span>{% endif %}{% else %}<span class="zero">—</span>{% endif %}</td>
+          <td class="n" data-label="{{ REG.columna }}">{% if t.minimo %}{{ t.minimo|cifra }}{% else %}<span class="zero">—</span>{% endif %}{% if t.avisos %} <span class="tag tag--warn" title="{{ t.avisos|join('; ') }}">revisar</span>{% endif %}</td>
           <td class="n strong" data-label="Remuneración mensual">{{ t.sueldo|cifra }}</td>
-          <td class="n sep" data-label="Aporte personal 9,45%">{{ t.iess_personal|cifra }}</td>
-          <td class="n" data-label="Aporte patronal 12,15%">{{ t.patronal|cifra }}</td>
+          <td class="n sep" data-label="Aporte personal {{ P.iess_personal }}">{{ t.iess_personal|cifra }}</td>
+          <td class="n" data-label="Aporte patronal {{ P.patronal_total }}">{{ t.patronal|cifra }}</td>
           <td class="n sep" data-label="Décimo 13°">{{ t.p13|cifra }}</td>
           <td class="n" data-label="Décimo 14°">{{ t.p14|cifra }}</td>
           <td class="n" data-label="Vacaciones">{{ t.p_vac|cifra }}</td>
@@ -107,8 +111,8 @@
   </div>
   <div class="panel-body">
     <div class="note"><p>
-      <b>Aporte patronal 12,15%</b> = IESS 11,15% + IECE 0,5% + SECAP 0,5%. <b>13°</b> = remuneración ÷ 12. <b>14°</b> = SBU $ {{ P.sbu }} ÷ 12.
-      <b>Vacaciones</b> = remuneración ÷ 24. <b>Fondos de reserva</b> = 8,33% desde el mes 13 de trabajo (ingreso {{ ingreso|fecha if ingreso else '—' }}).
+      <b>Aporte patronal {{ P.patronal_total }}</b> = IESS {{ P.patronal }}{% if P.hay_iece_secap %} + IECE {{ P.iece }} + SECAP {{ P.secap }}{% endif %}. <b>13°</b> = remuneración ÷ 12. <b>14°</b> = SBU $ {{ P.sbu }} ÷ 12.
+      <b>Vacaciones</b> = remuneración × {{ P.dias_vacaciones }} días ÷ 360 (1/{{ P.vac_divisor }}). <b>Fondos de reserva</b> = {{ P.fondos }} desde el mes 13 de trabajo (ingreso {{ ingreso|fecha if ingreso else '—' }}).
       <b>Costo mensual</b> = (remuneración + aporte patronal + provisiones) × n.º de trabajadores. El aporte personal lo paga el trabajador: se descuenta de su sueldo y no suma al costo.
     </p></div>
   </div>
@@ -122,11 +126,11 @@
   <div class="panel-body">
     {% set resultado = EMPRESA.ingreso_mensual - costo_personal - EMPRESA.otros_costos %}
     <div class="equation">
-      <div><div class="term-label">Ingreso mensual</div><div class="term-value">{{ EMPRESA.ingreso_mensual|money }}</div><div class="term-pct">contrato GAD</div></div>
+      <div><div class="term-label">Ingreso mensual</div><div class="term-value">{{ EMPRESA.ingreso_mensual|money }}</div><div class="term-pct">contrato</div></div>
       <div class="op">−</div>
       <div><div class="term-label"><span class="dot dot--costo"></span>Costo de personal</div><div class="term-value">{{ costo_personal|money }}</div><div class="term-pct">{{ '%.1f'|format(costo_personal / EMPRESA.ingreso_mensual * 100) }}% del ingreso</div></div>
       <div class="op">−</div>
-      <div><div class="term-label">Otros costos</div><div class="term-value">{{ EMPRESA.otros_costos|money }}</div><div class="term-pct">fijos + variables (Taller 05)</div></div>
+      <div><div class="term-label">Otros costos</div><div class="term-value">{{ EMPRESA.otros_costos|money }}</div><div class="term-pct">fijos + variables</div></div>
       <div class="op">=</div>
       <div class="term--total"><div class="term-label">Resultado mensual</div>
         <div class="term-value" style="color: var({{ '--neto' if resultado >= 0 else '--danger' }})">{{ resultado|money }}</div>

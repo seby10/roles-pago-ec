@@ -1,0 +1,11 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" role="img" aria-label="FeriAuto">
+  <rect width="64" height="64" rx="14" fill="#13213d"/>
+  <!-- camino rojo que cruza bajo la A -->
+  <path d="M5 55c13-9 30-12 54-17" fill="none" stroke="#c8202a" stroke-width="7" stroke-linecap="round"/>
+  <path d="M10 52c12-7 26-10 44-13.5" fill="none" stroke="#fff" stroke-width="1.2" stroke-dasharray="3 3.2" stroke-linecap="round" opacity=".9"/>
+  <!-- A -->
+  <path fill="#fff" fill-rule="evenodd" d="M27.6 9h8.8L52 47.5h-8.6l-3.3-8.7H23.9l-3.3 8.7H12L27.6 9zm4.4 10.4-5.4 12.9h10.8L32 19.4z"/>
+  <!-- auto en la ruta -->
+  <path fill="#fff" d="M41.5 33.2c.5-1.4 1.5-2.2 3-2.4l3.6-.5c1.2-.2 2.3.3 3 1.2l1.3 1.7 2.1.4c.9.2 1.5 1 1.5 1.9v1.7h-1.6a2.1 2.1 0 0 0-4.1.6h-4.7a2.1 2.1 0 0 0-4.1.7h-1.3l-.2-2.6c-.1-.9.4-1.7 1.2-2l.3-.1z"/>
+  <circle cx="45.4" cy="38.3" r="1.6" fill="#fff"/><circle cx="52.2" cy="37.4" r="1.6" fill="#fff"/>
+</svg>

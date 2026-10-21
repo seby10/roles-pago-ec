@@ -1,5 +1,29 @@
 {% extends "base.html" %}
 {% block title %}{{ 'Editar empleado' if e and e.id else 'Nuevo empleado' }}{% endblock %}
+
+{% block scripts %}
+<script>
+  // Al elegir un grado: en escalas de remuneración fija se completa el sueldo; en las demás se muestra el límite.
+  (function () {
+    var regla = {{ REG.regla|tojson }}, sel = document.getElementById('estructura'),
+        sueldo = document.getElementById('sueldo'), hint = document.getElementById('hint-sueldo'),
+        base = hint.textContent;
+    function sync(autollenar) {
+      var op = sel.options[sel.selectedIndex], valor = op && op.dataset.valor;
+      if (!valor) { hint.textContent = base; return; }
+      var txt = Number(valor).toLocaleString('es-EC', { minimumFractionDigits: 2 });
+      if (regla === 'fija') {
+        if (autollenar) sueldo.value = Number(valor).toFixed(2);
+        hint.textContent = 'Remuneración del grado ' + op.value + ': $ ' + txt;
+      } else {
+        hint.textContent = (regla === 'minimo' ? 'Mínimo de ' : 'Techo de ') + op.value + ': $ ' + txt + ' · ' + base;
+      }
+    }
+    sel.addEventListener('change', function () { sync(true); });
+    sync(false);
+  })();
+</script>
+{% endblock %}
 {% block content %}
 {% set editando = e and e.id %}
 {# Número para un input: 1500.0 -> 1500, 12.5 -> 12.5; si ya es texto (tras un error) se deja tal cual #}
@@ -75,12 +99,13 @@
           </select>
         </div>
         <div class="field span-4">
-          <label for="estructura">Estructura ocupacional (tabla sectorial)</label>
+          <label for="estructura">Escala · {{ REG.escala|lower }}</label>
           <select class="select" id="estructura" name="estructura">
-            <option value="">Sin estructura · mínimo = SBU $ {{ P.sbu }}</option>
-            {% for cod, (desc, minimo) in escala.items() %}<option value="{{ cod }}"{% if e and e.estructura == cod %} selected{% endif %}>{{ desc }} · mín. $ {{ minimo|cifra }}</option>{% endfor %}
+            <option value="">{{ 'Sin estructura · mínimo = SBU $ ' ~ P.sbu if REG.regla == 'minimo' else 'Sin grado asignado' }}</option>
+            {% if e and e.estructura and e.estructura not in escala|map(attribute='codigo') %}<option value="" selected disabled>{{ e.estructura }} · no existe en {{ REG.nombre }}: elige un grado</option>{% endif %}
+            {% for x in escala %}<option value="{{ x.codigo }}" data-valor="{{ x.valor }}"{% if e and e.estructura == x.codigo %} selected{% endif %}>{{ x.codigo }} · {{ x.denominacion }} · $ {{ x.valor|cifra }}</option>{% endfor %}
           </select>
-          <div class="hint">El sueldo no puede ser menor al mínimo sectorial de la estructura del cargo.</div>
+          <div class="hint">{% if REG.regla == 'minimo' %}El sueldo no puede ser menor al {{ REG.columna|lower }}.{% elif REG.regla == 'fija' %}La remuneración es la del grado: al elegirlo se completa el sueldo.{% else %}El valor del grado es el techo de la remuneración.{% endif %} <a href="{{ url_for('escalas') }}">Ver escala</a></div>
         </div>
         <div class="field span-12">
           <label for="funcion">Función principal del cargo</label>
@@ -100,7 +125,7 @@
             <input class="input num" id="sueldo" name="sueldo" type="number" step="0.01" min="0.01"
                    value="{{ num(e.sueldo) if e else '' }}" required>
           </div>
-          <div class="hint">SBU 2026: $ {{ P.sbu }}</div>
+          <div class="hint" id="hint-sueldo">SBU 2026: $ {{ P.sbu }}</div>
         </div>
         <div class="field span-4">
           <label for="fecha_ingreso">Fecha de ingreso</label>
@@ -117,11 +142,15 @@
     <div style="margin-top:28px;padding-top:24px;border-top:1px solid var(--line)">
       <div class="eyebrow" style="margin-bottom:14px">Beneficios e impuesto a la renta</div>
       <div class="form-grid">
-        <label class="check span-6" for="mensualiza_decimos">
-            <input type="checkbox" id="mensualiza_decimos" name="mensualiza_decimos" value="1"{% if e and e.mensualiza_decimos %} checked{% endif %}>
-            <div><strong>Mensualizar décimo tercero y cuarto</strong><span>Se pagan cada mes en el rol. Si no, se acumulan: 13° hasta el 24 de dic, 14° hasta el 15 de ago (Sierra)</span></div>
+        <label class="check span-4" for="mensualiza_13">
+            <input type="checkbox" id="mensualiza_13" name="mensualiza_13" value="1"{% if e is none or e.mensualiza_13 %} checked{% endif %}>
+            <div><strong>Décimo tercero mensualizado</strong><span>Se paga cada mes (1/12 de lo ganado). Si no, se acumula hasta el 24 de diciembre</span></div>
           </label>
-        <label class="check span-6" for="mensualiza_fondos">
+        <label class="check span-4" for="mensualiza_14">
+            <input type="checkbox" id="mensualiza_14" name="mensualiza_14" value="1"{% if e and e.mensualiza_14 %} checked{% endif %}>
+            <div><strong>Décimo cuarto mensualizado</strong><span>Se paga cada mes (SBU/12). Si no, se acumula hasta el 15 de {{ 'agosto' if EMPRESA.region in ('Sierra', 'Amazonía') else 'marzo' }} ({{ EMPRESA.region }})</span></div>
+          </label>
+        <label class="check span-4" for="mensualiza_fondos">
             <input type="checkbox" id="mensualiza_fondos" name="mensualiza_fondos" value="1"{% if e is none or e.mensualiza_fondos %} checked{% endif %}>
             <div><strong>Fondos de reserva mensualizados</strong><span>Por ley se pagan cada mes desde el mes 13. Desmarca si el trabajador pidió acumularlos en el IESS</span></div>
           </label>
@@ -139,6 +168,10 @@
           <input class="input num" id="cargas" name="cargas" type="number" min="0" max="20" step="1" value="{{ e.cargas if e else 0 }}">
           <div class="hint">0 cargas: 7 canastas · 1: 9 · 2: 11 · 3: 14 · 4: 17 · 5+: 20 (canasta $ {{ P.canasta }})</div>
         </div>
+        <label class="check span-12" for="catastrofica">
+            <input type="checkbox" id="catastrofica" name="catastrofica" value="1"{% if e and e.catastrofica %} checked{% endif %}>
+            <div><strong>Enfermedad catastrófica, rara o huérfana</strong><span>Del trabajador o de una carga familiar: el tope sube a {{ P.canastas_cat }} canastas sin importar el número de cargas</span></div>
+          </label>
       </div>
     </div>
 

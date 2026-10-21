@@ -1,0 +1,173 @@
+{% extends "base.html" %}
+{% block title %}Parámetros{% endblock %}
+{% block content %}
+{# Valor de un campo: lo enviado (si hubo errores) o lo guardado #}
+{% macro v(k) -%}{{ form[k] if form else (EMPRESA[k]|join('\n') if k == 'departamentos' else EMPRESA[k]) }}{%- endmacro %}
+{% macro num(x) -%}{%- set s = '%.2f'|format(x|float) -%}{{ s[:-3] if s.endswith('.00') else s }}{%- endmacro %}
+
+<div class="page-head">
+  <div>
+    <div class="eyebrow">Configuración</div>
+    <h1 class="title">Parámetros</h1>
+    <p class="meta">Empresa, régimen laboral y valores de cálculo. Los roles ya generados conservan los valores con que se calcularon.</p>
+  </div>
+</div>
+
+{% if errores %}
+<div class="flash flash--danger" role="alert">
+  <div><strong>Revisa estos datos antes de guardar</strong><ul>{% for er in errores %}<li>{{ er }}</li>{% endfor %}</ul></div>
+</div>
+{% endif %}
+
+<section class="panel">
+  <div class="panel-head"><h2>Logo</h2><span class="hint">Aparece en el menú, la pestaña del navegador y los roles impresos</span></div>
+  <form class="panel-body logo-form" method="post" action="{{ url_for('parametros_logo') }}" enctype="multipart/form-data">
+    <img class="logo-preview" src="{{ url_for('logo') }}" alt="Logo actual" width="72" height="72">
+    <div class="logo-actions">
+      <input class="input" type="file" name="logo" accept=".png,.jpg,.jpeg,.webp,.svg,image/png,image/jpeg,image/webp,image/svg+xml">
+      <div class="hint">PNG, JPG, WEBP o SVG de hasta 512 KB; mejor cuadrado. {% if not EMPRESA.logo %}Ahora se usa el logo por defecto de FeriAuto.{% endif %}</div>
+      <div class="actions" style="margin-top:10px">
+        <button class="btn" type="submit">Subir logo</button>
+        {% if EMPRESA.logo %}<button class="btn btn-ghost" type="submit" name="quitar" value="1">Volver al logo por defecto</button>{% endif %}
+      </div>
+    </div>
+  </form>
+</section>
+
+<form method="post" action="{{ url_for('parametros') }}">
+<section class="panel">
+  <div class="panel-head"><h2>Empresa</h2><span class="hint">Datos del membrete, del contrato y del organigrama</span></div>
+  <div class="panel-body">
+    <div class="form-grid">
+      <div class="field span-6">
+        <label for="nombre">Razón social</label>
+        <input class="input" id="nombre" name="nombre" value="{{ v('nombre') }}" maxlength="80" required>
+      </div>
+      <div class="field span-3">
+        <label for="ruc">RUC</label>
+        <input class="input" id="ruc" name="ruc" value="{{ v('ruc') }}" inputmode="numeric" pattern="\d{13}" maxlength="13" required>
+        <div class="hint">El 9.º dígito fija el día de pago de retenciones al SRI</div>
+      </div>
+      <div class="field span-3">
+        <label for="region">Región</label>
+        <select class="select" id="region" name="region">
+          {% for r in regiones %}<option{% if v('region') == r %} selected{% endif %}>{{ r }}</option>{% endfor %}
+        </select>
+        <div class="hint">Fecha del 14.º: 15 ago Sierra/Amazonía · 15 mar Costa/Galápagos</div>
+      </div>
+      <div class="field span-6">
+        <label for="actividad">Actividad</label>
+        <input class="input" id="actividad" name="actividad" value="{{ v('actividad') }}" maxlength="120">
+      </div>
+      <div class="field span-6">
+        <label for="cliente">Cliente principal / contrato</label>
+        <input class="input" id="cliente" name="cliente" value="{{ v('cliente') }}" maxlength="120">
+      </div>
+      <div class="field span-3">
+        <label for="ingreso_mensual">Ingreso mensual del contrato</label>
+        <div class="prefix"><span>$</span><input class="input num" id="ingreso_mensual" name="ingreso_mensual" type="number" step="0.01" min="0" value="{{ num(v('ingreso_mensual')) }}"></div>
+      </div>
+      <div class="field span-3">
+        <label for="otros_costos">Otros costos mensuales</label>
+        <div class="prefix"><span>$</span><input class="input num" id="otros_costos" name="otros_costos" type="number" step="0.01" min="0" value="{{ num(v('otros_costos')) }}"></div>
+        <div class="hint">Fijos + variables, sin personal</div>
+      </div>
+      <div class="field span-6">
+        <label for="departamentos">Departamentos (uno por línea)</label>
+        <textarea class="input textarea" id="departamentos" name="departamentos" rows="5">{{ v('departamentos') }}</textarea>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section class="panel">
+  <div class="panel-head"><h2>Régimen laboral</h2><span class="hint">Define la escala salarial, los aportes al IESS, las vacaciones y los recargos de horas extra</span></div>
+  <div class="panel-body">
+    <div class="regimenes">
+      {% for clave, r in REGIMENES.items() %}
+      <label class="regimen{% if clave == EMPRESA.regimen %} is-actual{% endif %}">
+        <input type="radio" name="regimen" value="{{ clave }}"{% if v('regimen') == clave %} checked{% endif %}>
+        <span class="regimen-head"><b>{{ r.nombre }}</b><span class="tag">{{ r.sector }}</span>{% if clave == EMPRESA.regimen %}<span class="tag tag--neto">actual</span>{% endif %}</span>
+        <span class="regimen-nota">{{ r.nota }}</span>
+        <span class="regimen-cifras">IESS {{ r.iess_personal|replace('.', ',') }} % / {{ r.iess_patronal|replace('.', ',') }} %{% if r.iece != '0' %} + IECE/SECAP 1 %{% endif %} · vacaciones {{ r.dias_vacaciones }} días · escala {{ r.escala|lower }}</span>
+      </label>
+      {% endfor %}
+    </div>
+    <p class="hint" id="aviso-regimen" hidden>Al guardar con otro régimen se cargan sus porcentajes legales y su escala salarial; cada empleado deberá tener un grado de esa escala.</p>
+  </div>
+</section>
+
+<section class="panel">
+  <div class="panel-head"><h2>Valores de cálculo · {{ REG.nombre }}</h2><span class="hint">Cámbialos si una resolución actualiza un valor; al lado está el valor legal vigente</span></div>
+  <div class="panel-body">
+    <div class="form-grid">
+      {% for k, etiqueta, tipo in campos %}
+      {% set legal = legales[k] %}
+      {% set actual = form[k] if form else EMPRESA[k] %}
+      <div class="field span-3">
+        <label for="{{ k }}">{{ etiqueta }}</label>
+        <div class="prefix{% if tipo == 'pct' %} suffix{% endif %}">
+          {% if tipo == 'usd' %}<span>$</span>{% elif tipo == 'pct' %}<span class="suf">%</span>{% elif tipo == 'factor' %}<span>×</span>{% endif %}
+          <input class="input num" id="{{ k }}" name="{{ k }}" type="number" step="{{ '1' if tipo == 'dias' else '0.0001' }}" min="0" value="{{ num(actual) if tipo != 'dias' else actual }}">
+        </div>
+        <div class="hint">{% if actual|float != legal|float %}<span class="tag tag--warn">modificado</span> {% endif %}Legal: {{ num(legal)|replace('.', ',') }}{{ ' %' if tipo == 'pct' else (' días' if tipo == 'dias' else '') }}</div>
+      </div>
+      {% endfor %}
+    </div>
+    <div class="note" style="margin-top:20px"><p>
+      <b>Fuentes 2026.</b> SBU $482 (Acuerdo MDT-2025-195) · aportes IESS Resolución C.D. 501 · IECE 0,5 % y SECAP 0,5 % siguen siendo aportes patronales en el sector privado (hay proyectos de reforma en la Asamblea) ·
+      canasta familiar básica enero 2026 $821,80 (INEC) · fondos de reserva 8,33 % desde el mes 13 (CT art. 196) · horas extra CT art. 55 y LOSEP art. 114 ·
+      jornada distribuida de hasta 10 h diarias: Acuerdo MDT-2026-059.
+    </p></div>
+  </div>
+  <div class="form-foot">
+    <button class="btn btn-ghost" type="submit" name="restablecer" value="1">Restablecer valores legales</button>
+    <button class="btn btn-primary" type="submit">Guardar parámetros</button>
+  </div>
+</section>
+</form>
+
+<div class="grid-2">
+  <section class="panel">
+    <div class="panel-head"><h2>Impuesto a la renta 2026</h2><span class="hint">Res. NAC-DGERCGC25-00000043 · igual para todos los regímenes</span></div>
+    <div class="table-wrap">
+      <table class="ledger">
+        <thead><tr><th class="first">Fracción básica</th><th class="n">Exceso hasta</th><th class="n">Impuesto fracción básica</th><th class="n">% excedente</th></tr></thead>
+        <tbody>
+        {% for desde, hasta, imp, pct in tabla_ir %}
+          <tr><td class="first n" style="text-align:left">{{ desde|cifra }}</td><td class="n">{{ hasta|cifra if hasta else 'en adelante' }}</td><td class="n">{{ imp|dash }}</td><td class="n">{{ (pct * 100)|int }} %</td></tr>
+        {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </section>
+  <section class="panel">
+    <div class="panel-head"><h2>Rebaja por gastos personales</h2><span class="hint">18 % del menor entre los gastos y el tope</span></div>
+    <div class="table-wrap">
+      <table class="ledger">
+        <thead><tr><th class="first">Cargas familiares</th><th class="n">Canastas</th><th class="n">Tope de gastos</th><th class="n">Rebaja máxima</th></tr></thead>
+        <tbody>
+        {% for c, n in P.canastas.items() %}
+          {% set tope = n * EMPRESA.canasta|float %}
+          <tr><td class="first">{{ c }}{{ ' o más' if loop.last else '' }}</td><td class="n">{{ n }}</td><td class="n">{{ tope|cifra }}</td><td class="n">{{ (tope * 0.18)|cifra }}</td></tr>
+        {% endfor %}
+          {% set tope = P.canastas_cat * EMPRESA.canasta|float %}
+          <tr><td class="first">Enfermedad catastrófica, rara o huérfana</td><td class="n">{{ P.canastas_cat }}</td><td class="n">{{ tope|cifra }}</td><td class="n">{{ (tope * 0.18)|cifra }}</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </section>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+  // Avisa que cambiar de régimen recarga porcentajes y escala.
+  (function () {
+    var actual = {{ EMPRESA.regimen|tojson }}, aviso = document.getElementById('aviso-regimen');
+    document.querySelectorAll('input[name=regimen]').forEach(function (r) {
+      r.addEventListener('change', function () { aviso.hidden = r.value === actual; });
+    });
+  })();
+</script>
+{% endblock %}

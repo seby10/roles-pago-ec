@@ -1,0 +1,191 @@
+{% extends "base.html" %}
+{% block title %}Resumen{% endblock %}
+{% block content %}
+{% set n = org.empleados|length %}
+{% set masa = composicion.sueldos %}
+{% set costo = org.costo_personal %}
+{% set resultado = EMPRESA.ingreso_mensual - costo - EMPRESA.otros_costos %}
+{% set dias_es = ['lun', 'mar', 'mié', 'jue', 'vie', 'sáb', 'dom'] %}
+
+<div class="page-head">
+  <div>
+    <div class="eyebrow">Resumen · {{ hoy.day }} {{ MESES[hoy.month]|lower }} {{ hoy.year }}</div>
+    <h1 class="title">{{ EMPRESA.nombre }}</h1>
+    <p class="meta">{{ EMPRESA.actividad }} · RUC {{ EMPRESA.ruc }} · régimen <b>{{ REG.nombre }}</b> ({{ REG.sector|lower }})</p>
+  </div>
+  <div class="actions">
+    <a class="btn" href="{{ url_for('empleado_nuevo') }}">Nuevo empleado</a>
+    <a class="btn btn-primary" href="{{ url_for('rol_nuevo') }}">Generar rol del mes</a>
+  </div>
+</div>
+
+<section class="stats" aria-label="Cifras del mes">
+  <div class="stat">
+    <div class="stat-label">Trabajadores activos</div>
+    <div class="stat-value">{{ n }}</div>
+    <div class="stat-note">{{ por_dep|length }} departamento{{ '' if por_dep|length == 1 else 's' }} · {{ org.tabla|length }} cargo{{ '' if org.tabla|length == 1 else 's' }}</div>
+  </div>
+  <div class="stat">
+    <div class="stat-label"><span class="dot dot--ink"></span>Remuneraciones</div>
+    <div class="stat-value">{{ masa|money }}</div>
+    <div class="stat-note">sueldos del mes, sin novedades</div>
+  </div>
+  <div class="stat stat--costo">
+    <div class="stat-label"><span class="dot dot--costo"></span>Costo mensual empresa</div>
+    <div class="stat-value">{{ costo|money }}</div>
+    <div class="stat-note">{% if masa %}× {{ '%.2f'|format(costo / masa)|replace('.', ',') }} por cada dólar de sueldo{% else %}sin personal activo{% endif %}</div>
+  </div>
+  <div class="stat">
+    <div class="stat-label">Resultado frente al contrato</div>
+    <div class="stat-value" style="color: var({{ '--neto' if resultado >= 0 else '--danger' }})">{{ resultado|money }}</div>
+    <div class="stat-note">{% if EMPRESA.ingreso_mensual %}{{ '%.1f'|format(resultado / EMPRESA.ingreso_mensual * 100)|replace('.', ',') }}% de margen sobre {{ EMPRESA.ingreso_mensual|money }}{% else %}define el ingreso en Parámetros{% endif %}</div>
+  </div>
+</section>
+
+<div class="grid-2">
+  <section class="panel">
+    <div class="panel-head">
+      <h2>Costo mensual por departamento</h2>
+      <a class="hint" href="{{ url_for('organigrama') }}">Ver organigrama →</a>
+    </div>
+    <div class="panel-body">
+      {% if por_dep %}
+      {% set tope = por_dep[0].costo or 1 %}
+      <ul class="hbars">
+        {% for d in por_dep %}
+        <li>
+          <div class="hbar-head"><span>{{ d.nombre }} <span class="sub">· {{ d.n }} persona{{ '' if d.n == 1 else 's' }}</span></span><span class="amt">{{ d.costo|money }}</span></div>
+          <div class="hbar"><span style="width: {{ (d.costo / tope * 100)|round(1) }}%"></span></div>
+        </li>
+        {% endfor %}
+      </ul>
+
+      {% set total_c = (composicion.sueldos + composicion.patronal + composicion.provisiones) or 1 %}
+      <div class="compo">
+        <div class="compo-head"><span>¿De qué está hecho el costo?</span><span class="sub">{{ costo|money }}</span></div>
+        <div class="bar bar--lg">
+          <span class="ink" style="width: {{ (composicion.sueldos / total_c * 100)|round(2) }}%"></span>
+          <span class="costo" style="width: {{ (composicion.patronal / total_c * 100)|round(2) }}%"></span>
+          <span class="costo-2" style="width: {{ (composicion.provisiones / total_c * 100)|round(2) }}%"></span>
+        </div>
+        <ul class="legend">
+          <li><span class="dot dot--ink"></span>Sueldos <b>{{ composicion.sueldos|money }}</b></li>
+          <li><span class="dot dot--costo"></span>Aportes patronales {{ P.patronal_total }} <b>{{ composicion.patronal|money }}</b></li>
+          <li><span class="dot dot--costo-2"></span>Décimos, vacaciones y fondos <b>{{ composicion.provisiones|money }}</b></li>
+        </ul>
+      </div>
+      {% else %}
+      <p class="muted">Sin empleados activos. <a href="{{ url_for('empleado_nuevo') }}">Registra el primero</a>.</p>
+      {% endif %}
+    </div>
+  </section>
+
+  <section class="panel">
+    <div class="panel-head">
+      <h2>Próximas obligaciones</h2>
+      <span class="hint">Región {{ EMPRESA.region }}</span>
+    </div>
+    <ol class="agenda">
+      {% for fecha, titulo, detalle, tono in obligaciones %}
+      {% set faltan = (fecha - hoy).days %}
+      <li>
+        <div class="agenda-fecha agenda-fecha--{{ tono }}"><b>{{ fecha.day }}</b><span>{{ MESES[fecha.month][:3]|lower }}</span></div>
+        <div>
+          <div class="agenda-titulo">{{ titulo }}</div>
+          <div class="sub">{{ detalle }}</div>
+        </div>
+        <span class="tag{% if faltan <= 7 %} tag--warn{% endif %}">{% if faltan == 0 %}hoy{% elif faltan == 1 %}mañana{% else %}en {{ faltan }} días{% endif %}</span>
+      </li>
+      {% endfor %}
+    </ol>
+  </section>
+</div>
+
+<div class="grid-2">
+  <section class="panel">
+    <div class="panel-head">
+      <h2>Últimos roles</h2>
+      <a class="hint" href="{{ url_for('roles_lista') }}">Historial completo →</a>
+    </div>
+    <div class="panel-body">
+      {% if roles %}
+      {% set tope_r = roles|map(attribute='total_costo')|max or 1 %}
+      <div class="cols" role="img" aria-label="Neto pagado y costo empleador de los últimos roles">
+        {% for r in roles %}
+        <a class="col" href="{{ url_for('rol_ver', id=r.id) }}" title="{{ MESES[r.mes] }} {{ r.anio }}: neto {{ r.total_neto|money }} · costo {{ r.total_costo|money }}">
+          <div class="col-bars">
+            <span class="neto" style="height: {{ (r.total_neto / tope_r * 100)|round(1) }}%"></span>
+            <span class="costo" style="height: {{ (r.total_costo / tope_r * 100)|round(1) }}%"></span>
+          </div>
+          <div class="col-label">{{ MESES[r.mes][:3] }}<span>{{ r.anio }}</span></div>
+        </a>
+        {% endfor %}
+      </div>
+      <ul class="legend">
+        <li><span class="dot dot--neto"></span>Neto pagado</li>
+        <li><span class="dot dot--costo"></span>Costo empleador</li>
+        {% set r0 = roles[-1] %}
+        <li class="legend-right">{{ MESES[r0.mes] }}: <b>{{ r0.total_neto|money }}</b> neto · IESS {{ r0.total_iess|money }} · IR {{ r0.total_ir|money }}</li>
+      </ul>
+      {% else %}
+      <div class="empty empty--sm">
+        <p>Aún no se genera ningún rol. Con los {{ n }} empleados activos el sistema calcula IESS, impuesto a la renta, décimos y el costo para la empresa.</p>
+        <a class="btn btn-primary" href="{{ url_for('rol_nuevo') }}">Generar rol del mes</a>
+      </div>
+      {% endif %}
+    </div>
+  </section>
+
+  <section class="panel">
+    <div class="panel-head">
+      <h2>Alertas</h2>
+      <a class="hint" href="{{ url_for('escalas') }}">Escala {{ REG.nombre }} →</a>
+    </div>
+    <ul class="alerts">
+      {% for a in alertas %}
+      <li class="alert alert--warn">
+        <span class="alert-dot"></span>
+        <div><a class="person" href="{{ url_for('empleado_editar', id=a.e.id) }}">{{ a.e.nombres }} {{ a.e.apellidos }}</a> · {{ a.e.cargo }}<div class="sub">{{ a.aviso }}</div></div>
+      </li>
+      {% endfor %}
+      {% for f in proximos_fondos %}
+      <li class="alert">
+        <span class="alert-dot alert-dot--costo"></span>
+        <div><b>{{ f.e.nombres }} {{ f.e.apellidos }}</b> cumple un año el {{ f.fecha|fecha }}
+          <div class="sub">Desde el mes 13 recibe fondos de reserva ({{ P.fondos }}): el costo mensual sube.</div></div>
+      </li>
+      {% endfor %}
+      {% if not alertas and not proximos_fondos %}
+      <li class="alert alert--ok">
+        <span class="alert-dot alert-dot--neto"></span>
+        <div><b>Todo en regla</b><div class="sub">Las {{ n }} remuneraciones cumplen la escala {{ REG.escala|lower }} ({{ n_escala }} niveles cargados).</div></div>
+      </li>
+      {% endif %}
+    </ul>
+  </section>
+</div>
+
+<section class="panel">
+  <div class="panel-head">
+    <h2>¿Es sostenible?</h2>
+    <span class="hint">Costo mensual del personal frente al contrato con el {{ EMPRESA.cliente }}</span>
+  </div>
+  <div class="panel-body">
+    <div class="equation">
+      <div><div class="term-label">Ingreso mensual</div><div class="term-value">{{ EMPRESA.ingreso_mensual|money }}</div><div class="term-pct">contrato</div></div>
+      <div class="op">−</div>
+      <div><div class="term-label"><span class="dot dot--costo"></span>Costo de personal</div><div class="term-value">{{ costo|money }}</div><div class="term-pct">{% if EMPRESA.ingreso_mensual %}{{ '%.1f'|format(costo / EMPRESA.ingreso_mensual * 100)|replace('.', ',') }}% del ingreso{% endif %}</div></div>
+      <div class="op">−</div>
+      <div><div class="term-label">Otros costos</div><div class="term-value">{{ EMPRESA.otros_costos|money }}</div><div class="term-pct">fijos + variables</div></div>
+      <div class="op">=</div>
+      <div class="term--total"><div class="term-label">Resultado mensual</div>
+        <div class="term-value" style="color: var({{ '--neto' if resultado >= 0 else '--danger' }})">{{ resultado|money }}</div>
+        <div class="term-pct">punto de equilibrio {{ (costo + EMPRESA.otros_costos)|money }}</div></div>
+    </div>
+    <p class="explain">
+      {% if resultado >= 0 %}El contrato cubre la nómina completa (aportes y beneficios de ley incluidos) y los demás costos.{% else %}El contrato no alcanza a cubrir la nómina y los demás costos: sube el ingreso o ajusta sueldos.{% endif %}
+      {% if org.fondos_futuros %}Desde el mes 13 se suman los fondos de reserva ({{ org.fondos_futuros|money }} al mes) y el resultado baja a {{ (resultado - org.fondos_futuros)|money }}.{% endif %}
+    </p>
+  </div>
+</section>
+{% endblock %}

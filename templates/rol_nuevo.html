@@ -58,8 +58,8 @@
           </tr>
           <tr>
             <th class="n sep">Días</th>
-            <th class="n sep">50% suplementarias</th>
-            <th class="n">100% extraordinarias</th>
+            <th class="n sep">Suplementarias {{ P.recargo_sup }}</th>
+            <th class="n">Extraordinarias {{ P.recargo_ext }}</th>
             <th class="n sep">Comisiones / bonos</th>
             <th class="n sep">Anticipos</th>
             <th class="n">Préstamo IESS</th>
@@ -76,9 +76,9 @@
             <td class="n sep"><input class="input input-sm num" style="width:64px" type="number" min="1" max="30" step="1"
                 name="dias_{{ f.e.id }}" value="{{ f.dias }}" aria-label="Días trabajados de {{ nom }}" onfocus="this.select()"></td>
             <td class="n sep"><input class="input input-sm num" style="width:92px" type="number" min="0" step="0.5"
-                name="h50_{{ f.e.id }}" value="{{ v(f.h50) }}" aria-label="Horas al 50% de {{ nom }}" onfocus="this.select()"></td>
+                name="h50_{{ f.e.id }}" value="{{ v(f.h50) }}" aria-label="Horas suplementarias de {{ nom }}" onfocus="this.select()"></td>
             <td class="n"><input class="input input-sm num" style="width:92px" type="number" min="0" step="0.5"
-                name="h100_{{ f.e.id }}" value="{{ v(f.h100) }}" aria-label="Horas al 100% de {{ nom }}" onfocus="this.select()"></td>
+                name="h100_{{ f.e.id }}" value="{{ v(f.h100) }}" aria-label="Horas extraordinarias de {{ nom }}" onfocus="this.select()"></td>
             <td class="n sep"><input class="input input-sm num" style="width:92px" type="number" min="0" step="0.01"
                 name="com_{{ f.e.id }}" value="{{ v(f.comisiones) }}" aria-label="Comisiones y bonos de {{ nom }}" onfocus="this.select()"></td>
             <td class="n sep"><input class="input input-sm num" style="width:92px" type="number" min="0" step="0.01"
@@ -98,7 +98,7 @@
       </table>
     </div>
     <div class="panel-body">
-      <div class="note"><p><b>Valor hora</b> = sueldo ÷ 240. <b>50%</b>: suplementarias diurnas (máx. 4 h/día, 12 h/semana). <b>100%</b>: sábados, domingos, feriados y suplementarias de 24:00 a 06:00. Comisiones y bonos aportan al IESS y pagan IR. Anticipos y préstamos quirografarios del IESS solo restan del neto.</p></div>
+      <div class="note"><p><b>Valor hora</b> = sueldo ÷ 240. <b>Suplementarias (+{{ P.recargo_sup }})</b>: después de la jornada, máx. 4 h/día y 12 h/semana. <b>Extraordinarias (+{{ P.recargo_ext }})</b>: sábados, domingos, feriados y de 24:00 a 06:00. Régimen {{ REG.nombre }}. Comisiones y bonos aportan al IESS y pagan IR. Anticipos y préstamos quirografarios del IESS solo restan del neto.</p></div>
     </div>
     <div class="form-foot">
       <p class="hint" style="margin:0 auto 0 0;align-self:center">El neto estimado se recalcula mientras escribes (<kbd>Enter</kbd> baja a la siguiente fila). Se procesarán {{ filas|length }} empleado{{ '' if filas|length == 1 else 's' }} activo{{ '' if filas|length == 1 else 's' }}</p>

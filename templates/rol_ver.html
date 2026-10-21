@@ -189,8 +189,8 @@
         <tr data-href="{{ url_for('rol_individual', id=cab.id, det_id=d.id) }}">
           <td class="first"><a class="person" href="{{ url_for('rol_individual', id=cab.id, det_id=d.id) }}">{{ d.nombre }}</a></td>
           <td class="n sep">{{ d.total_gravado|cifra }}</td>
-          <td class="n sep">{% if d.mensualiza_decimos %}<span class="tag tag--neto" title="Se paga cada mes en el rol">en rol</span> {% endif %}{{ d.p13|cifra }}</td>
-          <td class="n">{% if d.mensualiza_decimos %}<span class="tag tag--neto" title="Se paga cada mes en el rol">en rol</span> {% endif %}{{ d.p14|cifra }}</td>
+          <td class="n sep">{% if d.mensualiza_13 %}<span class="tag tag--neto" title="Se paga cada mes en el rol">en rol</span> {% endif %}{{ d.p13|cifra }}</td>
+          <td class="n">{% if d.mensualiza_14 %}<span class="tag tag--neto" title="Se paga cada mes en el rol">en rol</span> {% endif %}{{ d.p14|cifra }}</td>
           <td class="n">{{ d.p_vac|cifra }}</td>
           <td class="n">
             {% if d.tiene_fondos %}{% if d.mensualiza_fondos %}<span class="tag tag--neto" title="Se paga cada mes en el rol">en rol</span> {% endif %}{{ d.p_fondos|cifra }}

@@ -37,10 +37,11 @@
             <div class="sub" style="font-family:var(--mono)">{{ e.cedula }}</div>
           </td>
           <td data-label="Cargo"><span>{{ e.cargo }}<div class="sub">{{ e.departamento or e.tipo_contrato }}{% if e.jefe %} · reporta a {{ e.jefe }}{% endif %}</div></span></td>
-          <td class="n" data-label="Sueldo"><span>{{ e.sueldo|money }}{% if e.sueldo < P.sbu %} <span class="tag tag--warn">bajo SBU</span>{% endif %}</span></td>
+          <td class="n" data-label="Sueldo"><span>{{ e.sueldo|money }}{% if e.estructura %}<div class="sub">{{ e.estructura }}</div>{% endif %}{% for a in e.avisos %}<div><span class="tag tag--warn" title="{{ a }}">revisar escala</span></div>{% endfor %}</span></td>
           <td data-label="Ingreso"><span>{{ e.fecha_ingreso|fecha }}<div class="sub">{{ e.antiguedad }}</div></span></td>
           <td data-label="Beneficios"><span>
-            {% if e.mensualiza_decimos %}<span class="tag tag--neto">13°/14° mensual</span>{% endif %}
+            {% if e.mensualiza_13 %}<span class="tag tag--neto">13° mensual</span>{% endif %}
+            {% if e.mensualiza_14 %}<span class="tag tag--neto">14° mensual</span>{% endif %}
             {% if e.mensualiza_fondos %}<span class="tag tag--neto">F. reserva mensual</span>{% else %}<span class="tag tag--off">F. reserva acumula</span>{% endif %}
             {% if e.gastos_personales > 0 %}<span class="tag tag--costo">Gastos pers. $ {{ e.gastos_personales|cifra }}</span>{% endif %}
           </span></td>
