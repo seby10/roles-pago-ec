@@ -23,6 +23,13 @@ AMARILLO = PatternFill("solid", fgColor="FFF6D6")   # celdas editables
 FINO, DOBLE = Side(style="thin"), Side(style="double")
 
 
+def _texto(c):
+    """Datos escritos por el usuario (nombres, cargos...): siempre texto. openpyxl trataría '=...' como fórmula."""
+    if isinstance(c.value, str):
+        c.data_type = "s"
+    return c
+
+
 def _hoja(wb, titulo, empresa, subtitulo, columnas, detalles, color=None):
     """
     columnas: lista de (título, fn(d) -> valor, tipo) con tipo 'txt' | 'int' | 'num'.
@@ -31,6 +38,7 @@ def _hoja(wb, titulo, empresa, subtitulo, columnas, detalles, color=None):
     """
     ws = wb.create_sheet(titulo)
     ws["A1"] = empresa["nombre"]
+    _texto(ws["A1"])
     ws["A1"].font = Font(bold=True, size=14)
     ws["A2"] = subtitulo
     ws["A3"] = "Valores en USD"
@@ -57,6 +65,7 @@ def _hoja(wb, titulo, empresa, subtitulo, columnas, detalles, color=None):
                 v = v.format(r=i)
             c = ws.cell(row=i, column=j, value=v)
             if tipo == "txt":
+                _texto(c)
                 c.number_format = "@"            # texto: conserva ceros iniciales (cédulas)
             elif tipo == "int":
                 c.number_format = "0"
@@ -136,7 +145,7 @@ def libro_rol(cab, detalles, empresa, mes_nombre, P):
 def _membrete(ws, empresa):
     """Encabezado de 3 filas: empresa, RUC y régimen."""
     ws["A1"] = empresa["nombre"]
-    ws["A1"].font = Font(bold=True, size=14)
+    _texto(ws["A1"]).font = Font(bold=True, size=14)
     ws["A2"] = f"RUC {empresa['ruc']}"
     ws["A3"] = f"Régimen: {empresa.get('reg', {}).get('nombre', 'Código del Trabajo')} · Tabla de remuneraciones 2026"
     ws["A3"].font = Font(italic=True, color="666666")
@@ -235,6 +244,8 @@ def libro_remuneraciones(tabla, empresa, p, P):
     for r, d in enumerate(tabla, start=ini):
         for j, (_, _, fmt, v) in enumerate(cols, start=1):
             c = t.cell(r, j, v(d) if callable(v) else v.format(r=r))
+            if callable(v):
+                _texto(c)
             c.number_format = fmt
             if c.column_letter in "EFM":
                 c.fill = AMARILLO
@@ -363,6 +374,11 @@ if __name__ == "__main__":
     assert pl["G6"].value == "=D6+E6+F6"
     assert pl["H6"].value == detalles[0]["p_fondos"] > 0 and pl["H7"].value == 0   # solo quien acumula fondos
     assert wb["Transferencias"]["D6"].value == "Rol Octubre 2026"
+    malo = calcular_rol(dict(emps[0], nombres="=HYPERLINK(\"http://x\")", apellidos="", cargo="=1+1"),
+                        novs[0], 2026, 10)
+    ws = load_workbook(io.BytesIO(libro_rol(cab, [malo], dict(empresa, nombre="=2+2"), "Octubre", P)))["Rol de pagos"]
+    assert ws["B6"].data_type == "s" and ws["C6"].value == "=1+1" and ws["C6"].data_type == "s"
+    assert ws["A1"].data_type == "s"
     print("OK exportar")
 
     # ---- libro de remuneraciones: 4 cargos ficticios, estructura y fórmulas
