@@ -11,10 +11,15 @@
       <span class="org-cargo">{{ p.e.cargo }}</span>
       <span class="org-nombre">{{ p.e.nombres }} {{ p.e.apellidos }}</span>
       {% if p.e.funcion %}<span class="org-funcion">{{ p.e.funcion }}</span>{% endif %}
+      <span class="org-escala">
+        {% if p.e.grado[0] %}<span class="org-escala-k"><b>{{ p.e.estructura }}</b> · {{ p.e.grado[0] }}</span>
+        <span class="org-escala-v">{{ REG.columna }} $ {{ p.e.grado[1]|cifra }}</span>
+        {% else %}<span class="org-escala-k">Sin grado en la escala {{ REG.nombre }}</span>{% endif %}
+      </span>
       <span class="org-pie">
-        <span>{% if p.e.estructura %}<b>{{ p.e.estructura }}</b> · {% endif %}{{ p.e.sueldo|money }}</span>
+        <span>{{ p.e.sueldo|money }}</span>
         {% if p.e.avisos %}<span class="tag tag--warn" title="{{ p.e.avisos|join('; ') }}">revisar escala</span>
-        {% elif p.e.estructura %}<span class="tag tag--neto" title="{{ p.e.grado[0] }} · {{ REG.columna }} $ {{ p.e.grado[1]|cifra }}">cumple</span>{% endif %}
+        {% elif p.e.estructura %}<span class="tag tag--neto">cumple la escala</span>{% endif %}
       </span>
     </a>
     {% if p.hijos %}<ul>{% for h in p.hijos %}{{ nodo(h) }}{% endfor %}</ul>{% endif %}
@@ -111,7 +116,7 @@
   </div>
   <div class="panel-body">
     <div class="note"><p>
-      <b>Aporte patronal {{ P.patronal_total }}</b> = IESS {{ P.patronal }}{% if P.hay_iece_secap %} + IECE {{ P.iece }} + SECAP {{ P.secap }}{% endif %}. <b>13°</b> = remuneración ÷ 12. <b>14°</b> = SBU $ {{ P.sbu }} ÷ 12.
+      <b>Aporte patronal {{ P.patronal_total }}</b> = IESS {{ P.patronal }}{% if P.adicionales %} + {{ P.adicionales }}{% endif %}. <b>13°</b> = remuneración ÷ 12. <b>14°</b> = SBU $ {{ P.sbu }} ÷ 12.
       <b>Vacaciones</b> = remuneración × {{ P.dias_vacaciones }} días ÷ 360 (1/{{ P.vac_divisor }}). <b>Fondos de reserva</b> = {{ P.fondos }} desde el mes 13 de trabajo (ingreso {{ ingreso|fecha if ingreso else '—' }}).
       <b>Costo mensual</b> = (remuneración + aporte patronal + provisiones) × n.º de trabajadores. El aporte personal lo paga el trabajador: se descuenta de su sueldo y no suma al costo.
     </p></div>

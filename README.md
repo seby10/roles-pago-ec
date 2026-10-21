@@ -45,7 +45,7 @@ Para volver a los datos de ejemplo usa **Reiniciar demo**, en el pie de la barra
 | Linux no puede crear `.venv` | `sudo apt install python3-venv` |
 | "Address already in use" | Otro programa usa el 5050: `PORT=5051 python app.py` (en Windows: `set PORT=5051 && python app.py`). |
 | La tipografía se ve distinta | Las fuentes vienen de Google Fonts; sin internet se usan las del sistema y todo funciona igual. |
-| Aparece un archivo `roles_v4_respaldo.db` | Es la base anterior, respaldada al subir la versión del esquema. Puedes borrarlo si no lo necesitas; git lo ignora. |
+| Aparece un archivo `roles_v5_respaldo.db` (u otra versión) | Es la base anterior, respaldada al subir la versión del esquema. Puedes borrarlo si no lo necesitas; git lo ignora. |
 
 > **¿Por qué no está en Vercel?** Vercel no guarda archivos entre peticiones: la base SQLite se perdería y además todos compartirían los mismos datos. Para un taller tiene más sentido que cada uno corra su copia. Si necesitas un enlace público para que otra persona lo revise, `PUBLICAR.md` explica cómo ponerlo en PythonAnywhere.
 
@@ -88,7 +88,7 @@ Es lo primero que se ve y se calcula con los empleados activos, sin novedades de
 | 3 | Generar | `POST /roles/generar` | Por cada empleado activo llama a `calculos.calcular_rol()`, una función pura que no toca la base de datos, con los parámetros vigentes del régimen. Valida días entre 1 y 30 y valores numéricos ≥ 0. |
 | 4 | Guardar | (mismo POST) | Dentro de una transacción: borra el rol previo del mismo periodo (si existe), guarda la cabecera (con el régimen y los porcentajes usados) y luego los detalles. Regenerar reemplaza el rol. |
 | 5 | Vista consolidada | `/roles/<id>` | Totales de ingresos, descuentos y neto por empleado. El costo empleador va en una tabla aparte (provisiones y aportes patronales) que no afecta el neto. Filas clicables; en celular se muestra como tarjetas. Se imprime en A4 horizontal. **Exportar Excel** (`/roles/<id>/excel`) descarga un `.xlsx` con 4 hojas: Rol de pagos, Costo empleador, Planilla IESS y Transferencias (archivo para el banco), con totales como fórmulas `SUM`. |
-| 6 | Rol individual | `/roles/<id>/empleado/<det_id>` | Rol imprimible en A4 con logo, firmas, fechas de pago informativas y la sección "¿Cómo se calculó este rol?" de 9 pasos. Botones ← / → (o flechas del teclado) para pasar al siguiente empleado. |
+| 6 | Rol individual | `/roles/<id>/empleado/<det_id>` | Rol imprimible en A4 con logo, firmas y fechas de pago informativas; el costo del empleador se ve en pantalla pero no sale impreso (es información de la empresa, no del trabajador). Incluye la sección "¿Cómo se calculó este rol?" de 9 pasos. Botones ← / → (o flechas del teclado) para pasar al siguiente empleado. |
 | extra | Organigrama y remuneraciones | `/organigrama` | Árbol de cargos con líneas de autoridad, generado desde "reporta a". Cada tarjeta muestra departamento, cargo, nombre, función, grado y sueldo, con una etiqueta "cumple" o "revisar escala". Debajo está la tabla de remuneraciones que pide la PEA 3 y el panel **"¿Es sostenible?"**. Como el organigrama y la tabla salen de los mismos datos, todo cargo del organigrama aparece en la tabla. |
 
 Son dos libros Excel distintos. El del **rol** (`/roles/<id>/excel`, paso 5) tiene 4 hojas de nómina y banco, y sus encabezados usan los porcentajes con que se generó ese rol. El de la **tabla de remuneraciones** (`/organigrama/excel`, botón *Exportar Excel* del organigrama) tiene tres hojas: *Parámetros* (celdas amarillas editables y la tabla del IR como rango con nombre), *Tabla de remuneraciones* (número de trabajadores y remuneración como entradas; aportes, 13.º, 14.º, vacaciones, fondos y costo como fórmulas, más el bloque de sostenibilidad) y *Cálculo detallado* (el Gerente General paso a paso, con el IR por `VLOOKUP`). Al cambiar el sueldo o el n.º de trabajadores, todo se recalcula en Excel.
@@ -137,7 +137,7 @@ Se ejecuta con un solo comando: `python app.py`.
 
 **Por qué `UNIQUE(anio, mes)`:** solo puede existir un rol por periodo. Regenerar borra la cabecera anterior (el detalle cae en cascada) en lugar de duplicar datos.
 
-**Versión del esquema:** `PRAGMA user_version` guarda `SCHEMA_VERSION` (hoy **5**). La versión 3 agregó las columnas de organización a `empleados`; la 4 cambió la semilla (5 personas: los 4 socios de FERIAUTO y el Programador Junior); la 5 agregó las tablas `parametros` y `escalas`, separó la mensualización del 13.º y del 14.º, agregó `catastrofica` y guardó régimen y porcentajes en cada rol. Si al arrancar la base tiene otra versión, se renombra como `roles_v<N>_respaldo.db` y se crea una nueva con la semilla. Nada se borra en silencio: al pasar de la 4 a la 5, la base anterior quedó como `roles_v4_respaldo.db` (antes, de la 3 a la 4, como `roles_v3_respaldo.db`).
+**Versión del esquema:** `PRAGMA user_version` guarda `SCHEMA_VERSION` (hoy **6**). La versión 3 agregó las columnas de organización a `empleados`; la 4 cambió la semilla (5 personas: los 4 socios de FERIAUTO y el Programador Junior); la 5 agregó las tablas `parametros` y `escalas`, separó la mensualización del 13.º y del 14.º, agregó `catastrofica` y guardó régimen y porcentajes en cada rol; la 6 no cambia tablas: recrea la base para que los parámetros arranquen con el IECE en 0 %. Si al arrancar la base tiene otra versión, se renombra como `roles_v<N>_respaldo.db` y se crea una nueva con la semilla. Nada se borra en silencio: al pasar de la 5 a la 6, la base anterior queda como `roles_v5_respaldo.db`.
 
 ---
 
@@ -186,11 +186,11 @@ NETO A RECIBIR   = total ingresos − total descuentos
 vacaciones        = gravado × días de vacaciones / 360   (CT 15 días = 1/24 · LOSEP/LOEP/LOES 30 días = 1/12)
 fondos de reserva = gravado × 8,33%                  (solo si cumple 365 días al cierre del mes)
 aporte patronal   = gravado × aporte patronal        (CT 11,15% · LOSEP/LOEP/LOES 9,15%)
-IECE 0,5% + SECAP 0,5% = gravado × 1%                (solo CT; adicionales al 11,15%)
-COSTO EMPLEADOR   = gravado + provisiones (13°, 14°, vacaciones, fondos, patronal, IECE/SECAP)
+SECAP 0,5%        = gravado × 0,5%                   (solo CT; adicional al 11,15%. IECE en 0%)
+COSTO EMPLEADOR   = gravado + provisiones (13°, 14°, vacaciones, fondos, patronal, SECAP)
 ```
 
-En el Código del Trabajo el costo patronal de aportes suma 12,15% (11,15% + 1%). En los regímenes públicos el IECE y el SECAP están en 0. Los fondos de reserva se provisionan siempre que el trabajador cumpla el año; si están mensualizados, además se pagan en el rol (sección 5.7).
+En el Código del Trabajo el costo patronal de aportes suma 11,65% (11,15% + SECAP 0,5%). El IECE queda en 0% (ver 5.11); si el IESS lo vuelve a cobrar, se pone 0,5% en Parámetros y el total sube a 12,15%. En los regímenes públicos el IECE y el SECAP están en 0. Los fondos de reserva se provisionan siempre que el trabajador cumpla el año; si están mensualizados, además se pagan en el rol (sección 5.7).
 
 ### 5.5 Tabla de IR 2026 (personas naturales)
 
@@ -306,7 +306,7 @@ Lo que cambia al elegir el régimen en Parámetros (todo es ajustable después, 
 | --- | --- | --- | --- | --- |
 | Sector | Privado | Servidores públicos | Empresas públicas | Educación superior pública |
 | IESS personal / patronal | 9,45 % / 11,15 % | 11,45 % / 9,15 % | 11,45 % / 9,15 % | 11,45 % / 9,15 % |
-| IECE / SECAP | 0,5 % + 0,5 % | no aplica | no aplica | no aplica |
+| IECE / SECAP | 0 % + 0,5 % | no aplica | no aplica | no aplica |
 | Vacaciones al año | 15 días (1/24) | 30 días (1/12) | 30 días | 30 días |
 | Horas suplementarias / extraordinarias | ×1,5 / ×2 | ×1,25 / ×1,6 | ×1,25 / ×1,6 | ×1,25 / ×1,6 |
 | Escala y regla | Mínimos sectoriales · mínimo | Escala nacional · fija | Escala nacional como techo · techo | Escalafón CES · mínimo |
@@ -335,8 +335,8 @@ Comparación con el mismo caso (el de María en 6.1: sueldo $ 1.500, 10 horas su
 | Neto a recibir | 1.577,47 | 1.532,73 |
 | Vacaciones | 74,74 (15 días) | 148,18 (30 días) |
 | Aporte patronal | 200,00 (11,15 %) | 162,70 (9,15 %) |
-| IECE + SECAP | 17,94 | 0,00 |
-| Costo empleador | 2.425,50 | 2.425,48 |
+| SECAP (IECE en 0) | 8,97 | 0,00 |
+| Costo empleador | 2.416,53 | 2.425,48 |
 
 ### 5.11 Vigencia normativa (revisada a octubre de 2026)
 
@@ -346,7 +346,7 @@ Comparación con el mismo caso (el de María en 6.1: sueldo $ 1.500, 10 horas su
 | Tabla de IR | Tabla 2026 de la sección 5.5 (Res. NAC-DGERCGC25-00000043) |
 | Canasta familiar básica | $ 821,80 (enero 2026) y canastas por cargas 7 / 9 / 11 / 14 / 17 / 20 |
 | Aportes IESS | Privados 9,45 % y 11,15 %; públicos 11,45 % y 9,15 % (Resolución C.D. 501) |
-| IECE y SECAP | Siguen siendo aporte patronal en el sector privado (0,5 % cada uno). Hay proyectos de reforma en la Asamblea: si se aprueban, bastaría con ajustarlos en Parámetros. |
+| IECE y SECAP | **IECE: 0 % por defecto.** El Instituto de Crédito Educativo dejó de funcionar en 2015 y en abril de 2025 el Ministerio del Trabajo informó que el 0,5 % se eliminó con la reforma al Código Monetario (luego dio señales contradictorias). Si el IESS lo vuelve a cobrar, basta con poner 0,5 % en Parámetros. **SECAP: 0,5 %**, sigue vigente como aporte patronal del sector privado; hay proyectos de reforma en la Asamblea. |
 | Jornada distribuida | Hasta 10 horas diarias (Acuerdo MDT-2026-059); el recargo aplica solo sobre las 40 horas semanales. La app no distribuye la jornada: las horas con recargo las ingresas tú en las novedades del mes. |
 | Salarios mínimos sectoriales | Tabla 2025 (MDT-2024-301), vigente en 2026 por no haberse emitido una nueva (sección 5.9) |
 
@@ -383,8 +383,8 @@ Provisiones:
 | Vacaciones | 1.793,75 / 24 | $ 74,74 |
 | Fondos de reserva | 1.793,75 × 8,33% | $ 149,42 |
 | Aporte patronal | 1.793,75 × 11,15% | $ 200,00 |
-| IECE + SECAP | 1.793,75 × 1% | $ 17,94 |
-| **Total provisiones** | | **$ 631,75** |
+| SECAP | 1.793,75 × 0,5% | $ 8,97 |
+| **Total provisiones** | | **$ 622,78** |
 
 Cadena completa:
 
@@ -392,7 +392,7 @@ Cadena completa:
 Sueldo bruto (gravado)  $ 1.793,75
 − Descuentos            $   216,28   (IESS 169,51 + IR 46,77)
 = NETO A RECIBIR        $ 1.577,47
-Costo empleador         $ 1.793,75 + provisiones 631,75 = $ 2.425,50
+Costo empleador         $ 1.793,75 + provisiones 622,78 = $ 2.416,53
 ```
 
 Como María acumula los fondos, no se pagan en el rol. Si los mensualizara, su neto sería $ 1.726,89 (suma los $ 149,42 como no gravados); IESS, IR y costo no cambian.
@@ -422,8 +422,8 @@ Provisiones:
 | Vacaciones | 550 / 24 | $ 22,92 |
 | Fondos de reserva | 0: cumple 365 días en sep 2027 | $ 0,00 |
 | Aporte patronal | 550 × 11,15% | $ 61,33 |
-| IECE + SECAP | 550 × 1% | $ 5,50 |
-| **Total provisiones** | | **$ 175,75** |
+| SECAP | 550 × 0,5% | $ 2,75 |
+| **Total provisiones** | | **$ 173,00** |
 
 Cadena completa:
 
@@ -432,10 +432,10 @@ Sueldo bruto (gravado)  $ 550,00
 + 13° mensualizado      $  45,83   (no gravado)
 − Descuentos            $  51,98   (IESS 51,98 + IR 0,00)
 = NETO A RECIBIR        $ 543,85
-Costo empleador         $ 550,00 + provisiones 175,75 = $ 725,75
+Costo empleador         $ 550,00 + provisiones 173,00 = $ 723,00
 ```
 
-Mensualizar el 13.º sube el neto pero no el costo: de los $ 175,75 de provisiones, $ 45,83 se pagan hoy en vez de acumularse. Si además mensualizara el 14.º, sumaría $ 40,17 más al neto.
+Mensualizar el 13.º sube el neto pero no el costo: de los $ 173,00 de provisiones, $ 45,83 se pagan hoy en vez de acumularse. Si además mensualizara el 14.º, sumaría $ 40,17 más al neto.
 
 ### 6.3 Rol de octubre 2026 de los cinco trabajadores
 
@@ -443,14 +443,14 @@ Generado con los datos de la semilla, sin novedades (30 días, sin horas extra, 
 
 | Empleado | Sueldo | 13.º mensualizado | IESS 9,45 % | Neto | Costo empleador |
 | --- | ---: | ---: | ---: | ---: | ---: |
-| Sebastián Constante | 550,00 | 45,83 | 51,98 | 543,85 | 725,75 |
-| Pablo Montero | 530,00 | 44,17 | 50,09 | 524,08 | 700,82 |
-| Daylé García | 530,00 | 44,17 | 50,09 | 524,08 | 700,82 |
-| Jhanina Conterón | 530,00 | 44,17 | 50,09 | 524,08 | 700,82 |
-| Andrés Villacís | 510,00 | 42,50 | 48,20 | 504,30 | 675,89 |
-| **Total** | **2.650,00** | **220,84** | **250,45** | **2.620,39** | **3.504,10** |
+| Sebastián Constante | 550,00 | 45,83 | 51,98 | 543,85 | 723,00 |
+| Pablo Montero | 530,00 | 44,17 | 50,09 | 524,08 | 698,17 |
+| Daylé García | 530,00 | 44,17 | 50,09 | 524,08 | 698,17 |
+| Jhanina Conterón | 530,00 | 44,17 | 50,09 | 524,08 | 698,17 |
+| Andrés Villacís | 510,00 | 42,50 | 48,20 | 504,30 | 673,34 |
+| **Total** | **2.650,00** | **220,84** | **250,45** | **2.620,39** | **3.490,85** |
 
-El total de ingresos es $ 2.870,84 y la planilla IESS, $ 572,45 (aporte personal + patronal + IECE/SECAP). Antes de que el 13.º se mensualizara por defecto, el neto total era $ 2.399,55; la diferencia ($ 220,84) es exactamente ese décimo. El costo no cambió.
+El total de ingresos es $ 2.870,84 y la planilla IESS, $ 559,20 (aporte personal + patronal + SECAP). Antes de que el 13.º se mensualizara por defecto, el neto total era $ 2.399,55; la diferencia ($ 220,84) es exactamente ese décimo. El costo no cambió.
 
 ---
 
@@ -466,7 +466,7 @@ El total de ingresos es $ 2.870,84 y la planilla IESS, $ 572,45 (aporte personal
 | Fondos completos si cumple 365 días al cierre del mes | La ley prorratea el mes 13. Aquí se simplifica a todo o nada. |
 | 13° y fondos mensualizados por defecto; 14° acumulado por defecto | Fondos: por ley se pagan mensualizados salvo pedido de acumularlos en el IESS. Los décimos se pueden mensualizar a pedido del trabajador; en la demo el 13.º viene mensualizado y el 14.º no, y cada uno se cambia en la ficha del empleado. Lo mensualizado no paga IESS ni IR. Pendiente de confirmar la exención de IR (sección 10). |
 | Los décimos, fondos y utilidades se calculan igual en los cuatro regímenes | El motor aplica la misma fórmula en el sector público. No modela particularidades del sector público (p. ej. cómo se pagan allí los décimos o los fondos). La agenda del Resumen solo muestra la participación de utilidades para el Código del Trabajo. |
-| IECE 0,5% + SECAP 0,5% se muestran aparte, adicionales al 11,15%, solo en el Código del Trabajo | Son costo del empleador en el sector privado. El costo patronal total suma 12,15%. En los regímenes públicos están en 0. |
+| SECAP 0,5% se muestra aparte, adicional al 11,15%, solo en el Código del Trabajo; IECE en 0% | Es costo del empleador en el sector privado: el costo patronal total suma 11,65%. El IECE se dejó en 0% (sección 5.11), editable. En los regímenes públicos ambos están en 0. |
 | Los valores de cálculo son editables con el valor legal al lado | Una resolución puede cambiar un porcentaje sin tocar el código. Los roles ya generados conservan los valores con que se calcularon. |
 | La escala de cada régimen se carga en la base y se puede editar | Los valores oficiales se cargan al crear la base; cambiarlos en `/escalas` afecta los avisos, no los montos del rol. |
 | Tres niveles de la escala CT (B3, C2, D2) están derivados | No se tuvo el anexo oficial de esas filas: se calcularon desde la tabla 2023 con el incremento 2023-2025 (±$ 0,02). |
@@ -485,12 +485,12 @@ El total de ingresos es $ 2.870,84 y la planilla IESS, $ 572,45 (aporte personal
 
 ## 8. Guion sugerido para la demo (PEA 3, ~6 min)
 
-1. **Resumen** (`/`): mostrar las cifras de FERIAUTO: 5 trabajadores, remuneraciones $ 2.650,00, costo mensual $ 3.504,10 y resultado frente al contrato $ 465,90. Señalar la agenda de obligaciones (el RUC de la demo termina su 9.º dígito en 3, por eso el SRI vence los días 14) y las alertas.
+1. **Resumen** (`/`): mostrar las cifras de FERIAUTO: 5 trabajadores, remuneraciones $ 2.650,00, costo mensual $ 3.490,85 y resultado frente al contrato $ 479,15. Señalar la agenda de obligaciones (el RUC de la demo termina su 9.º dígito en 3, por eso el SRI vence los días 14) y las alertas.
 2. **Empleados:** 5 en total: los 4 socios de FERIAUTO y el Programador Junior Andrés Villacís (contratado, no socio; nombre ficticio), con su departamento y su jefe inmediato.
 3. **Organigrama** (`/organigrama`): explicar las líneas de autoridad (desde "reporta a") y la función de cada cargo. Tiene 3 niveles: Gerente General, Director de Tecnología (Pablo Montero) y Programador Junior, que le reporta a él.
-4. **Tabla de remuneraciones:** recorrer cada rubro (aportes, 13.º, 14.º, vacaciones, fondos y costo) y explicar por qué cada sueldo supera el mínimo de su estructura (A1: $ 507,37; C3 del programador: $ 500,80). Totales de los 5 trabajadores: remuneraciones $ 2.650,00; aporte personal $ 250,45; patronal $ 322,00; 13.º $ 220,84; 14.º $ 200,85; vacaciones $ 110,41; costo $ 3.504,10. El Programador Junior tiene costo $ 675,89 y neto $ 504,30.
-5. **¿Es sostenible?:** con el contrato de $ 4.500, el costo del personal ($ 3.504,10, 77,9 %) más otros costos ($ 530) deja un margen de $ 465,90 (10,4 %). Desde el mes 13, los fondos de reserva (+$ 220,75 al mes) lo bajan a $ 245,15 (5,4 %). El punto de equilibrio es $ 4.034,10.
-6. **Rol de octubre 2026:** generarlo desde *Roles de pago* (neto total $ 2.620,39 porque el 13.º se paga mensualizado; costo $ 3.504,10) y abrir el rol individual de **Sebastián Constante** (neto $ 543,85). Revisar "¿Cómo se calculó?" y compararlo con la sección 6.2.
+4. **Tabla de remuneraciones:** recorrer cada rubro (aportes, 13.º, 14.º, vacaciones, fondos y costo) y explicar por qué cada sueldo supera el mínimo de su estructura (A1: $ 507,37; C3 del programador: $ 500,80). Totales de los 5 trabajadores: remuneraciones $ 2.650,00; aporte personal $ 250,45; patronal $ 308,75; 13.º $ 220,84; 14.º $ 200,85; vacaciones $ 110,41; costo $ 3.490,85. El Programador Junior tiene costo $ 673,34 y neto $ 504,30. Cada cargo del organigrama muestra su nivel de la escala (código, denominación y valor) y si la cumple.
+5. **¿Es sostenible?:** con el contrato de $ 4.500, el costo del personal ($ 3.490,85, 77,6 %) más otros costos ($ 530) deja un margen de $ 479,15 (10,6 %). Desde el mes 13, los fondos de reserva (+$ 220,75 al mes) lo bajan a $ 258,40 (5,7 %). El punto de equilibrio es $ 4.020,85.
+6. **Rol de octubre 2026:** generarlo desde *Roles de pago* (neto total $ 2.620,39 porque el 13.º se paga mensualizado; costo $ 3.490,85) y abrir el rol individual de **Sebastián Constante** (neto $ 543,85). Revisar "¿Cómo se calculó?" y compararlo con la sección 6.2.
 7. **Excel de la tabla** (*Exportar Excel* en el organigrama): cambiar un sueldo en Excel y mostrar cómo se recalcula todo.
 8. **Sueldos de mercado en vivo:** editar a un director y subir su sueldo a 1.200 (p. ej.), luego recargar el Resumen o el organigrama: el margen de "¿Es sostenible?" se vuelve negativo.
 9. **Parámetros y régimen (opcional):** mostrar los valores de cálculo con su valor legal al lado y, en *Escalas salariales*, cómo cambia la escala entre Código del Trabajo y LOSEP. Si cambias el régimen para probarlo, **Reiniciar demo** vuelve a FERIAUTO.
@@ -502,7 +502,7 @@ El total de ingresos es $ 2.870,84 y la planilla IESS, $ 572,45 (aporte personal
 
 ``` text
 roles_pago/
-├── app.py            rutas Flask, esquema SQLite (versión 5), parámetros, escalas, resumen,
+├── app.py            rutas Flask, esquema SQLite (versión 6), parámetros, escalas, resumen,
 │                     validaciones, guardado y organigrama
 ├── calculos.py       motor de cálculo puro, regímenes (REGIMENES), escalas oficiales (ESCALAS_BASE) y self-check
 ├── exportar.py       libro Excel (.xlsx) del rol y de la tabla de remuneraciones con openpyxl + self-check
@@ -534,7 +534,7 @@ Las reglas se contrastaron con prensa y calculadoras ecuatorianas: tabla de IR 2
 - Escala de remuneraciones del sector público: Acuerdo MDT-2024-039 (17-mar-2024). Escalafón académico: Reglamento de Carrera y Escalafón del Profesor e Investigador del CES, art. 69, y RPC-SE-20-No.057-2021.
 - Jornada distribuida de hasta 10 horas diarias: Acuerdo MDT-2026-059.
 - Mercado de directores (referencia de 1.200 a 1.800 dólares): Paylab y Jobint, abril de 2026.
-- Aportes IESS (9,45% / 11,15%) e IECE/SECAP 1%: <https://runahr.com/ec/recursos/salario/calculadora-de-salario/>. Aportes del sector público: Resolución C.D. 501 del IESS (11,45% / 9,15%).
+- Aportes IESS (9,45% / 11,15%) y SECAP 0,5%: <https://runahr.com/ec/recursos/salario/calculadora-de-salario/>. Aportes del sector público: Resolución C.D. 501 del IESS (11,45% / 9,15%).
 - Canasta $ 821,80 y tabla de cargas: <https://elmercurio.com.ec/?p=1239654>
 - Fondos de reserva mensualizados por defecto: <https://primicias.ec/economia/fondos-reserva-iess-consejos-acumular-mensualizar-88720>
 - Décimo cuarto (fechas de pago): <https://www.expreso.ec/actualidad/economia/decimo-cuarto-sueldo-en-ecuador-2026-cuanto-deben-pagarte-275386.html>

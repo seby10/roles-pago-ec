@@ -116,14 +116,14 @@ def libro_rol(cab, detalles, empresa, mes_nombre, P):
     _hoja(wb, "Costo empleador", empresa, sub, [
         ced, emp, col("Total gravado", "total_gravado"), col("Décimo 13°", "p13"),
         col("Décimo 14°", "p14"), col("Vacaciones", "p_vac"), col("Fondos de reserva", "p_fondos"),
-        col(f"Aporte patronal {P['patronal']}", "patronal"), col(f"IECE {P['iece']} + SECAP {P['secap']}", "iece_secap"),
+        col(f"Aporte patronal {P['patronal']}", "patronal"), col(P.get("adicionales") or "IECE + SECAP", "iece_secap"),
         col("Total provisiones y aportes", "total_provisiones"), col("COSTO TOTAL", "costo_total"),
     ], detalles, color=(11, "3E4A7C"))
 
     _hoja(wb, "Planilla IESS", empresa, sub, [
         ced, emp, col("Total gravado (base de aportación)", "total_gravado"),
         col(f"Aporte personal {P['iess_personal']}", "iess_personal"), col(f"Aporte patronal {P['patronal']}", "patronal"),
-        col(f"IECE + SECAP {P['iece_secap']}", "iece_secap"),
+        col(P.get("adicionales") or "IECE + SECAP", "iece_secap"),
         ("Total a pagar al IESS", lambda d: "=D{r}+E{r}+F{r}", "num"),   # fórmula por fila
         # los fondos solo se depositan en el IESS si el trabajador los acumula (no los mensualiza)
         ("Fondos de reserva a depositar en IESS",
@@ -181,7 +181,7 @@ def libro_remuneraciones(tabla, empresa, p, P):
         ("SBU", "Salario Básico Unificado 2026", p["sbu"], "#,##0.00", "Base del décimo 14° (SBU ÷ 12)"),
         ("P_PERSONAL", "Aporte personal IESS", p["iess_personal"], "0.00%", "Se descuenta al trabajador"),
         ("P_PATRONAL", "Aporte patronal IESS", p["iess_patronal"], "0.00%", "Lo paga la empresa"),
-        ("P_IECE_SECAP", "IECE + SECAP", p["iece"] + p["secap"], "0.00%",
+        ("P_IECE_SECAP", "Aportes adicionales (IECE + SECAP)", p["iece"] + p["secap"], "0.00%",
          f"Adicional al patronal: total {P['patronal_total']}"),
         ("P_FONDOS", "Fondos de reserva", p["fondos"], "0.00%", "Desde el mes 13 de trabajo"),
         ("DIAS_VACACIONES", "Días de vacaciones al año", p["dias_vacaciones"], "0",
@@ -308,7 +308,7 @@ def libro_remuneraciones(tabla, empresa, p, P):
         ("Impuesto a la renta anual", "Impuesto fracción + (base − desde) × %", "=ROUND(C10+(C8-C9)*C11,2)", "#,##0.00"),
         ("Retención mensual de IR", "IR anual ÷ 12", "=ROUND(C12/12,2)", "#,##0.00"),
         ("NETO A RECIBIR", "Remuneración − aporte personal − retención IR", "=C6-C7-C13", "#,##0.00"),
-        (f"Aporte patronal {P['patronal_total']}", f"Remuneración × ({P['patronal']} + {P['iece_secap']} IECE/SECAP)", f"={T}I{ini}", "#,##0.00"),
+        (f"Aporte patronal {P['patronal_total']}", f"Remuneración × ({P['patronal']} + {P['iece_secap']} adicionales)", f"={T}I{ini}", "#,##0.00"),
         ("Décimo tercero", "Remuneración ÷ 12", f"={T}J{ini}", "#,##0.00"),
         ("Décimo cuarto", "SBU ÷ 12", f"={T}K{ini}", "#,##0.00"),
         ("Vacaciones", f"Remuneración × {P['dias_vacaciones']} días ÷ 360", f"={T}L{ini}", "#,##0.00"),
@@ -340,8 +340,8 @@ if __name__ == "__main__":
     import calculos
     from calculos import calcular_rol
 
-    P = dict(iess_personal="9,45%", patronal="11,15%", iece="0,5%", secap="0,5%", iece_secap="1%",
-             patronal_total="12,15%", fondos="8,33%", dias_vacaciones=15)
+    P = dict(iess_personal="9,45%", patronal="11,15%", iece="0%", secap="0,5%", iece_secap="0,5%",
+             patronal_total="11,65%", fondos="8,33%", dias_vacaciones=15, adicionales="SECAP 0,5%")
 
     empresa = {"nombre": "FERIAUTO SAS", "ruc": "1790000000001"}
     base = dict(nombres="María", apellidos="López", cargo="Vendedora", sueldo=1500,
@@ -425,8 +425,8 @@ if __name__ == "__main__":
 
     # ---- valores esperados (en Python puro, mismas reglas que las fórmulas)
     sueldo = Decimal(1200)
-    costo_gg = sueldo * (1 + Decimal("0.1215")) + 100 + Decimal(482) / 12 + 50
-    assert abs(float(costo_gg) - (1200 * 1.1215 + 100 + 40.1667 + 50)) < 0.001
+    costo_gg = sueldo * (1 + Decimal("0.1165")) + 100 + Decimal(482) / 12 + 50
+    assert abs(float(costo_gg) - (1200 * 1.1165 + 100 + 40.1667 + 50)) < 0.001
     base = (sueldo - sueldo * p["iess_personal"]) * 12
     ir_anual = calculos.impuesto_renta_anual(base)[0]
     print(f"OK libro_remuneraciones (estructura y fórmulas). Esperado GG: costo {costo_gg:.2f}, retención IR {ir_anual / 12:.2f}")

@@ -11,7 +11,7 @@ Flujo de cada rol:
     − IESS personal − retención IR − anticipos − préstamos IESS = TOTAL DESCUENTOS
     = NETO A RECIBIR
     Costo empleador = gravado + provisiones (13°, 14°, vacaciones, fondos de reserva)
-                      + aporte patronal (+ IECE y SECAP en el sector privado)
+                      + aporte patronal (+ SECAP en el sector privado)
 
 Los porcentajes, vacaciones, recargos de horas extra y la escala salarial dependen del régimen
 laboral (REGIMENES: Código del Trabajo, LOSEP, LOEP, LOES) y llegan en el dict `p`.
@@ -58,7 +58,9 @@ CANASTAS_CATASTROFICA = 100   # enfermedad catastrófica, rara o huérfana del t
 REGIMENES = {
     "CT": dict(
         nombre="Código del Trabajo", sector="Sector privado",
-        iess_personal="9.45", iess_patronal="11.15", iece="0.5", secap="0.5",
+        # IECE: el instituto se suprimió en 2015 y el MDT informó en 2025 que su 0,5 % se eliminó con la
+        # reforma al Código Monetario → 0 por defecto (editable si se vuelve a cobrar). SECAP 0,5 % sigue.
+        iess_personal="9.45", iess_patronal="11.15", iece="0", secap="0.5",
         dias_vacaciones=15, recargo_sup="1.5", recargo_ext="2", regla="minimo",
         escala="Salarios mínimos sectoriales", columna="Mínimo sectorial",
         contratos=["Indefinido", "Plazo fijo", "Eventual", "Ocasional", "Por obra o servicio", "Jornada parcial"],
@@ -370,13 +372,13 @@ if __name__ == "__main__":
     r = calcular_rol(emp, dict(dias=30, h50=10, comisiones=200), 2026, 10)
     esperado = dict(v_h50=93.75, total_gravado=1793.75, iess_personal=169.51, base_ir_anual=19490.88,
                     ir_causado=561.19, rebaja_gp=0, ir=46.77, neto=1577.47, p13=149.48, p14=40.17,
-                    p_vac=74.74, p_fondos=149.42, patronal=200.00, iece_secap=17.94, costo_total=2425.50)
+                    p_vac=74.74, p_fondos=149.42, patronal=200.00, iece_secap=8.97, costo_total=2416.53)
     for k, v in esperado.items():
         assert r[k] == v, f"{k}: {r[k]} != {v}"
 
     # Caso 2: mismo empleado, cobra fondos mensualizados → suben ingresos no gravados y neto; costo igual.
     r2_ = calcular_rol({**emp, "mensualiza_fondos": 1}, dict(dias=30, h50=10, comisiones=200), 2026, 10)
-    assert r2_["neto"] == round(1577.47 + 149.42, 2) and r2_["costo_total"] == 2425.50 and r2_["ir"] == 46.77
+    assert r2_["neto"] == round(1577.47 + 149.42, 2) and r2_["costo_total"] == 2416.53 and r2_["ir"] == 46.77
 
     # Caso 3: rebaja por gastos personales. $8.000 de gastos con 2 cargas (tope 11 CFB = $9.039,80):
     # rebaja = 18% × 8.000 = 1.440; IR causado 561,19 − 1.440 < 0 → retención 0.

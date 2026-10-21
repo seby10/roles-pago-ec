@@ -74,8 +74,9 @@
     <div class="amt">{{ d.neto|money }}</div>
   </div>
 
-  <section class="doc-costo">
-    <div class="doc-section doc-section--costo"><h3>Costo empleador · informativo, no afecta el neto</h3></div>
+  {# El costo del empleador es información interna de la empresa: se ve en pantalla, no sale en el rol impreso. #}
+  <section class="doc-costo no-print">
+    <div class="doc-section doc-section--costo"><h3>Costo empleador · solo en pantalla, no se imprime</h3></div>
     <div class="grid">
       <div>
         <div class="line"><span>Décimo tercero <span class="q">1/12</span></span><span>{{ estado(d.mensualiza_13, 'paga 24 dic') }} <span class="amt">{{ d.p13|cifra }}</span></span></div>
@@ -86,7 +87,7 @@
       </div>
       <div>
         <div class="line"><span>Aporte patronal IESS <span class="q">{{ P.patronal }}</span></span><span class="amt">{{ d.patronal|cifra }}</span></div>
-        {% if d.iece_secap %}<div class="line"><span>IECE {{ P.iece }} + SECAP {{ P.secap }}</span><span class="amt">{{ d.iece_secap|cifra }}</span></div>{% endif %}
+        {% if d.iece_secap %}<div class="line"><span>{{ P.adicionales or 'IECE + SECAP' }}</span><span class="amt">{{ d.iece_secap|cifra }}</span></div>{% endif %}
         <div class="line"><span><b>Provisiones y aportes</b></span><span class="amt"><b>{{ d.total_provisiones|cifra }}</b></span></div>
       </div>
     </div>

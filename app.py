@@ -120,7 +120,7 @@ CREATE TABLE IF NOT EXISTS roles_detalle (
 );
 """
 
-SCHEMA_VERSION = 5  # súbelo si cambias SCHEMA: la base vieja se respalda y se crea una nueva
+SCHEMA_VERSION = 6  # súbelo si cambias SCHEMA: la base vieja se respalda y se crea una nueva
 
 # Equipo de FERIAUTO: los 4 socios fundadores, contratados bajo el Código del Trabajo desde el inicio
 # de actividades (01-09-2026), y el primer empleado (ficticio). Sueldos sobre el mínimo sectorial de cada
@@ -261,6 +261,9 @@ def vista_params():
             "iess_personal": pct(e["iess_personal"]), "patronal": pct(e["iess_patronal"]),
             "iece": pct(e["iece"]), "secap": pct(e["secap"]), "iece_secap": pct(iece_secap),
             "hay_iece_secap": bool(iece_secap),
+            # solo los aportes adicionales que se cobran: "SECAP 0,5%" o "IECE 0,5% + SECAP 0,5%"
+            "adicionales": " + ".join(f"{n} {pct(e[k])}" for n, k in (("IECE", "iece"), ("SECAP", "secap"))
+                                      if Decimal(str(e[k]))),
             "patronal_total": pct(Decimal(str(e["iess_patronal"])) + iece_secap), "fondos": pct(e["fondos"]),
             "dias_vacaciones": int(e["dias_vacaciones"]), "vac_divisor": 360 // int(e["dias_vacaciones"]),
             "f_sup": float(e["recargo_sup"]), "f_ext": float(e["recargo_ext"]),
@@ -564,7 +567,7 @@ def rol_generar():
         anio=anio, mes=mes, generado_en=date.today().isoformat(), n_empleados=len(detalles),
         total_ingresos=total("total_ingresos"), total_descuentos=total("total_descuentos"),
         total_neto=total("neto"), total_costo=total("costo_total"), total_ir=total("ir"),
-        # planilla IESS = lo que se transfiere al IESS: aporte personal + patronal + IECE/SECAP
+        # planilla IESS = lo que se transfiere al IESS: aporte personal + patronal + adicionales (SECAP)
         total_iess=total("iess_personal") + total("patronal") + total("iece_secap"),
         regimen=empresa()["regimen"], params=json.dumps(vista_params()))
     cabecera = {k: float(v) if isinstance(v, Decimal) else v for k, v in cabecera.items()}

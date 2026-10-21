@@ -89,7 +89,7 @@
         <input type="radio" name="regimen" value="{{ clave }}"{% if v('regimen') == clave %} checked{% endif %}>
         <span class="regimen-head"><b>{{ r.nombre }}</b><span class="tag">{{ r.sector }}</span>{% if clave == EMPRESA.regimen %}<span class="tag tag--neto">actual</span>{% endif %}</span>
         <span class="regimen-nota">{{ r.nota }}</span>
-        <span class="regimen-cifras">IESS {{ r.iess_personal|replace('.', ',') }} % / {{ r.iess_patronal|replace('.', ',') }} %{% if r.iece != '0' %} + IECE/SECAP 1 %{% endif %} · vacaciones {{ r.dias_vacaciones }} días · escala {{ r.escala|lower }}</span>
+        <span class="regimen-cifras">IESS {{ r.iess_personal|replace('.', ',') }} % / {{ r.iess_patronal|replace('.', ',') }} %{% if r.secap != '0' %} + SECAP {{ r.secap|replace('.', ',') }} %{% endif %} · vacaciones {{ r.dias_vacaciones }} días · escala {{ r.escala|lower }}</span>
       </label>
       {% endfor %}
     </div>
@@ -115,7 +115,7 @@
       {% endfor %}
     </div>
     <div class="note" style="margin-top:20px"><p>
-      <b>Fuentes 2026.</b> SBU $482 (Acuerdo MDT-2025-195) · aportes IESS Resolución C.D. 501 · IECE 0,5 % y SECAP 0,5 % siguen siendo aportes patronales en el sector privado (hay proyectos de reforma en la Asamblea) ·
+      <b>Fuentes 2026.</b> SBU $482 (Acuerdo MDT-2025-195) · aportes IESS Resolución C.D. 501 · SECAP 0,5 % sigue siendo aporte patronal del sector privado · IECE en 0 %: el instituto se suprimió en 2015 y el MDT informó en 2025 que el 0,5 % se eliminó (cámbialo si el IESS lo vuelve a cobrar) ·
       canasta familiar básica enero 2026 $821,80 (INEC) · fondos de reserva 8,33 % desde el mes 13 (CT art. 196) · horas extra CT art. 55 y LOSEP art. 114 ·
       jornada distribuida de hasta 10 h diarias: Acuerdo MDT-2026-059.
     </p></div>

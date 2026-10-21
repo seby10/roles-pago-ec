@@ -44,7 +44,7 @@
   <div class="stat">
     <div class="stat-label">Planilla IESS</div>
     <div class="stat-value">{{ cab.total_iess|money }}</div>
-    <div class="stat-note">personal + patronal + IECE/SECAP</div>
+    <div class="stat-note">personal + patronal{{ ' + ' ~ P.adicionales if P.adicionales }}</div>
   </div>
   <div class="stat">
     <div class="stat-label">Retención IR</div>
@@ -79,7 +79,7 @@
     </div>
     <p class="explain">
       Neto + descuentos = total ingresos del rol ({{ cab.total_ingresos|money }}). Encima de eso la empresa paga aporte patronal
-      {{ P.patronal }}, IECE + SECAP {{ P.iece_secap }} y provisiona décimos, vacaciones y fondos de reserva.
+      {{ P.patronal }}{{ ', ' ~ P.adicionales if P.adicionales }} y provisiona décimos, vacaciones y fondos de reserva.
     </p>
   </div>
 </section>
@@ -181,7 +181,7 @@
         </tr>
         <tr>
           <th class="n sep">Décimo 13°</th><th class="n">Décimo 14°</th><th class="n">Vacaciones</th><th class="n">Fondos reserva</th>
-          <th class="n sep">Patronal {{ P.patronal }}</th><th class="n">IECE+SECAP</th>
+          <th class="n sep">Patronal {{ P.patronal }}</th><th class="n">{{ P.adicionales or 'IECE+SECAP' }}</th>
         </tr>
       </thead>
       <tbody>
