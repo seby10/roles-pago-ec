@@ -158,7 +158,7 @@
       {% if not alertas and not proximos_fondos %}
       <li class="alert alert--ok">
         <span class="alert-dot alert-dot--neto"></span>
-        <div><b>Todo en regla</b><div class="sub">Las {{ n }} remuneraciones cumplen la escala {{ REG.escala|lower }} ({{ n_escala }} niveles cargados).</div></div>
+        <div><b>Todo en regla</b><div class="sub">Las {{ n }} remuneraciones cumplen la regla del régimen ({{ REG.escala|lower }}, {{ n_escala }} niveles cargados).</div></div>
       </li>
       {% endif %}
     </ul>

@@ -30,7 +30,7 @@
   <div>
     <div class="eyebrow">{{ EMPRESA.nombre }} · RUC {{ EMPRESA.ruc }}</div>
     <h1 class="title">Organigrama <em>funcional</em></h1>
-    <p class="meta"><b>{{ tabla|length }}</b> cargo{{ '' if tabla|length == 1 else 's' }} · <b>{{ tabla|sum(attribute='n') }}</b> trabajadores · régimen {{ REG.nombre }} · escala {{ REG.escala|lower }}</p>
+    <p class="meta"><b>{{ tabla|length }}</b> cargo{{ '' if tabla|length == 1 else 's' }} · <b>{{ tabla|sum(attribute='n') }}</b> trabajadores · régimen {{ REG.nombre }} · {{ REG.escala|lower }}</p>
   </div>
   <div class="actions no-print">
     <a class="btn" href="{{ url_for('organigrama_excel') }}" download>Exportar Excel</a>

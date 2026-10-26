@@ -89,7 +89,7 @@
         <input type="radio" name="regimen" value="{{ clave }}"{% if v('regimen') == clave %} checked{% endif %}>
         <span class="regimen-head"><b>{{ r.nombre }}</b><span class="tag">{{ r.sector }}</span>{% if clave == EMPRESA.regimen %}<span class="tag tag--neto">actual</span>{% endif %}</span>
         <span class="regimen-nota">{{ r.nota }}</span>
-        <span class="regimen-cifras">IESS {{ r.iess_personal|replace('.', ',') }} % / {{ r.iess_patronal|replace('.', ',') }} %{% if r.secap != '0' %} + SECAP {{ r.secap|replace('.', ',') }} %{% endif %} · vacaciones {{ r.dias_vacaciones }} días · escala {{ r.escala|lower }}</span>
+        <span class="regimen-cifras">IESS {{ r.iess_personal|replace('.', ',') }} % / {{ r.iess_patronal|replace('.', ',') }} %{% if r.secap != '0' %} + SECAP {{ r.secap|replace('.', ',') }} %{% endif %} · vacaciones {{ r.dias_vacaciones }} días · {{ r.escala|lower }}</span>
       </label>
       {% endfor %}
     </div>
