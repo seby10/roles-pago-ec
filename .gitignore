@@ -6,6 +6,7 @@ roles.db
 .venv/
 __pycache__/
 *.pyc
+.test-output/
 
 # Configuración local del editor / asistente
 .claude/

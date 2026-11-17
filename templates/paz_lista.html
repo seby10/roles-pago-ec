@@ -1,0 +1,11 @@
+{% extends 'base.html' %}
+{% block title %}Paz y salvo{% endblock %}
+{% block content %}
+<div class="page-head"><div><div class="eyebrow">Personal · cierre laboral</div><h1 class="title">Paz y salvo</h1><p class="meta">Entregas, revisiones y documentos firmados por empleado.</p></div><a class="btn btn-primary" href="{{ url_for('paz.nuevo') }}">Nuevo expediente</a></div>
+<div class="flash flash--warning">{{ PAZ_ALCANCE }}</div>
+<section class="panel"><div class="table-wrap"><table class="ledger stack"><thead><tr><th>Expediente</th><th>Empleado</th><th>Salida</th><th>Estado</th><th></th></tr></thead><tbody>
+{% for e in expedientes %}<tr><td data-label="Expediente">PS-{{ '%06d'|format(e.id) }}</td><td data-label="Empleado">{{ e.datos.nombres }} {{ e.datos.apellidos }}<div class="sub">{{ e.datos.cargo }}</div></td><td data-label="Salida">{{ e.fecha_salida|fecha }}</td><td data-label="Estado"><span class="tag">{{ e.estado|replace('_',' ') }}</span></td><td><a class="btn btn-sm" href="{{ url_for('paz.ver', id=e.id) }}">Abrir expediente</a></td></tr>
+{% else %}<tr><td colspan="5">Aún no hay expedientes. Selecciona un empleado para comenzar.</td></tr>{% endfor %}
+</tbody></table></div></section>
+<p class="hint">Registro administrativo centralizado. En modo publicado, estos expedientes requieren la clave de edición y no son visibles al público.</p>
+{% endblock %}

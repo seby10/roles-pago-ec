@@ -9,6 +9,7 @@ import io
 import json
 import os
 import sqlite3
+from contextlib import closing
 from datetime import date
 from decimal import Decimal, InvalidOperation
 from pathlib import Path
@@ -22,7 +23,7 @@ from markupsafe import Markup
 import calculos
 import exportar
 
-DB_PATH = Path(__file__).with_name("roles.db")
+DB_PATH = Path(os.environ.get("ROLES_DB_PATH") or Path(__file__).with_name("roles.db"))
 # Valores iniciales de Parámetros (se guardan en la tabla parametros y se editan desde la app).
 # Datos simulados del emprendimiento (proyecto académico).
 PARAMETROS_INICIALES = {
@@ -120,7 +121,7 @@ CREATE TABLE IF NOT EXISTS roles_detalle (
 );
 """
 
-SCHEMA_VERSION = 6  # súbelo si cambias SCHEMA: la base vieja se respalda y se crea una nueva
+SCHEMA_VERSION = 7  # v7: migración aditiva de paz y salvo, conserva empleados y roles de v6
 
 # Equipo de FERIAUTO: los 4 socios fundadores, contratados bajo el Código del Trabajo desde el inicio
 # de actividades (01-09-2026), y el primer empleado (ficticio). Sueldos sobre el mínimo sectorial de cada
@@ -157,6 +158,9 @@ EDIT_PASSWORD = os.environ.get("EDIT_PASSWORD", "")
 # La clave de sesión firma la cookie del modo edición: publicada, nunca puede ser la del repositorio.
 # Sin SECRET_KEY se genera una aleatoria (las sesiones se pierden al reiniciar el servidor, nada más).
 app.secret_key = os.environ.get("SECRET_KEY") or (secrets.token_hex(32) if EDIT_PASSWORD else "demo-roles-pago")
+
+import paz_salvo
+paz_salvo.registrar(app, db=lambda: db(), empresa=lambda: empresa(), password=lambda: EDIT_PASSWORD)
 
 
 # ------------------------------------------------------------------ base de datos
@@ -200,10 +204,16 @@ def init_db():
         with sqlite3.connect(DB_PATH) as conn:
             version = conn.execute("PRAGMA user_version").fetchone()[0]
         conn.close()
-        if version != SCHEMA_VERSION:  # esquema viejo: se respalda en vez de borrarse
+        if version == 6:
+            # SQLite backup también incluye cambios de un posible journal/WAL.
+            with closing(sqlite3.connect(DB_PATH)) as origen, closing(sqlite3.connect(
+                    DB_PATH.with_name("roles_v6_pre_paz_salvo_respaldo.db"))) as respaldo:
+                origen.backup(respaldo)
+        elif version != SCHEMA_VERSION:  # versiones anteriores mantienen el comportamiento histórico
             DB_PATH.replace(DB_PATH.with_name(f"roles_v{version}_respaldo.db"))
     with sqlite3.connect(DB_PATH) as conn:
         conn.executescript(SCHEMA)
+        conn.executescript(paz_salvo.SCHEMA)
         conn.execute(f"PRAGMA user_version = {SCHEMA_VERSION}")
         if conn.execute("SELECT COUNT(*) FROM parametros").fetchone()[0] == 0:
             iniciales = {**PARAMETROS_INICIALES, **valores_legales(PARAMETROS_INICIALES["regimen"])}
@@ -477,6 +487,9 @@ def empleado_toggle(id):
 def empleado_eliminar(id):
     if db().execute("SELECT 1 FROM roles_detalle WHERE empleado_id = ? LIMIT 1", (id,)).fetchone():
         flash("No se puede eliminar: el empleado aparece en roles generados. Inactívalo en su lugar.", "warning")
+    elif (db().execute("SELECT 1 FROM paz_expedientes WHERE empleado_id = ? LIMIT 1", (id,)).fetchone()
+          or db().execute("SELECT 1 FROM paz_revisiones WHERE responsable_id = ? LIMIT 1", (id,)).fetchone()):
+        flash("No se puede eliminar: tiene un expediente de paz y salvo. Inactívalo en su lugar.", "warning")
     elif db().execute("SELECT 1 FROM empleados WHERE reporta_a = ? LIMIT 1", (id,)).fetchone():
         flash("No se puede eliminar: otros cargos le reportan. Cambia primero su jefe inmediato.", "warning")
     else:

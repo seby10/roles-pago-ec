@@ -34,6 +34,7 @@
   ('empleados', 'Empleados', url_for('empleados_lista'), ep.startswith('empleado')),
   ('organigrama', 'Organigrama', url_for('organigrama'), ep.startswith('organigrama')),
   ('roles', 'Roles de pago', url_for('roles_lista'), ep.startswith('rol')),
+  ('roles', 'Paz y salvo', url_for('paz.lista'), ep.startswith('paz.')),
   ('escalas', 'Escalas salariales', url_for('escalas'), ep.startswith('escalas')),
   ('parametros', 'Parámetros', url_for('parametros'), ep.startswith('parametros')),
 ] %}
@@ -64,7 +65,7 @@
         {% if SOLO_LECTURA %}Solo lectura · <a href="{{ url_for('login') }}">Modo edición</a>
         {% else %}
         <form class="inline" method="post" action="{{ url_for('demo_reiniciar') }}"
-              data-confirm="Se borran todos los roles, empleados y parámetros y se vuelve a los datos de ejemplo de FERIAUTO. ¿Continuar?">
+              data-confirm="Se borran todos los roles, empleados, parámetros, expedientes de paz y salvo y sus archivos adjuntos y se vuelve a los datos de ejemplo de FERIAUTO. ¿Continuar?">
           <button class="link-btn" type="submit">Reiniciar demo</button>
         </form>{% if PUBLICADO %} · <a href="{{ url_for('logout') }}">Salir del modo edición</a>{% endif %}
         {% endif %}

@@ -48,6 +48,7 @@
           <td data-label="Estado">{% if e.activo %}<span class="tag tag--neto">Activo</span>{% else %}<span class="tag tag--off">Inactivo</span>{% endif %}</td>
           <td class="acciones" style="text-align:right">
             <a class="btn btn-sm" href="{{ url_for('empleado_editar', id=e.id) }}">Editar</a>
+            {% if not SOLO_LECTURA %}<a class="btn btn-sm" href="{{ url_for('paz.nuevo', empleado=e.id) }}">Paz y salvo</a>{% endif %}
             <form class="inline" method="post" action="{{ url_for('empleado_toggle', id=e.id) }}">
               <button class="btn btn-sm btn-ghost" type="submit">{{ 'Inactivar' if e.activo else 'Activar' }}</button>
             </form>
