@@ -7,6 +7,7 @@ roles.db
 __pycache__/
 *.pyc
 .test-output/
+entregables_ape4/
 
 # Configuración local del editor / asistente
 .claude/

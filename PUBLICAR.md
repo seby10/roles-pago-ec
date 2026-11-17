@@ -45,9 +45,11 @@ python3.12 -m pip install --user -r requirements.txt
 
 Usa la misma versión de Python que indica tu aplicación en la pestaña **Web** (sustituye `python3.12` si es otra). Si la aplicación utiliza un entorno virtual, actívalo con `workon NOMBRE_DEL_ENTORNO` y ejecuta `python -m pip install -r requirements.txt` sin `--user`. El entorno virtual configurado en Web debe coincidir con el usado para instalar las dependencias. [Guía oficial de Flask en PythonAnywhere](https://help.pythonanywhere.com/pages/Flask/).
 
-Después pulsa **Reload** en la pestaña Web. La base `roles.db` no está en git. Si estaba en esquema 6, la primera carga crea `roles_v6_pre_paz_salvo_respaldo.db` y agrega las tablas de paz y salvo conservando los datos existentes. Para esquemas anteriores revisa la sección de migración de [PAZ_Y_SALVO.md](PAZ_Y_SALVO.md) antes de actualizar.
+Después pulsa **Reload** en la pestaña Web. La base `roles.db` no está en git. Si estaba en esquema 6 o 7, la primera carga crea `roles_vN_pre_paz_salvo_respaldo.db` y migra al esquema **8**, conservando los datos y expedientes existentes. Para esquemas anteriores revisa la sección de migración de [PAZ_Y_SALVO.md](PAZ_Y_SALVO.md) antes de actualizar.
 
 Entra en **Modo edición → Paz y salvo → Nuevo expediente** para probarlo. Con `EDIT_PASSWORD` configurada, los expedientes y adjuntos no están disponibles en la navegación pública. Prueba con datos ficticios y evita **Reiniciar demo** si necesitas conservar datos o archivos.
+
+Para la exposición, entra en **Paz y salvo → Caso ficticio APE 4 → Preparar caso**. Se incluyen los ocho departamentos, documentos ficticios y el PDF original del simulador del Ministerio. Puedes mostrar una revisión manual y usar el recorrido ficticio para abreviar. Después verifica y aprueba los resultados ministeriales y emite los tres documentos. La copia final para firma es el resumen general. Consulta la [guía de demostración](PAZ_Y_SALVO.md).
 
 ## A tener en cuenta
 

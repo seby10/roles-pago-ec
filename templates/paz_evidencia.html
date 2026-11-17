@@ -1,0 +1,6 @@
+{% extends 'base.html' %}
+{% block title %}Evidencia {{ a.nombre }}{% endblock %}
+{% block content %}
+<div class="page-head"><div><div class="eyebrow">Expediente PS-{{ '%06d'|format(e.id) }}</div><h1 class="title">Evidencia documental</h1><p>{{ a.nombre }}</p></div><div class="actions"><a class="btn" href="{{ url_for('paz.ver',id=e.id) }}">Volver</a><a class="btn btn-primary" href="{{ url_for('paz.descargar',id=e.id,adjunto=a.id) }}">Descargar</a></div></div>
+<section class="panel"><div class="panel-body">{% if a.mime=='application/pdf' %}<iframe title="Vista del PDF {{ a.nombre }}" src="{{ url_for('paz.descargar',id=e.id,adjunto=a.id,ver=1) }}" style="width:100%;height:75vh;border:0"></iframe>{% else %}<img src="{{ url_for('paz.descargar',id=e.id,adjunto=a.id,ver=1) }}" alt="{{ a.nombre }}" style="max-width:100%;height:auto">{% endif %}<p class="hint" style="overflow-wrap:anywhere">SHA-256 {{ a.sha256 }}</p><p class="hint">Si tu navegador no permite la vista de PDF, utiliza Descargar.</p></div></section>
+{% endblock %}

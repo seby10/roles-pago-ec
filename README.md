@@ -137,7 +137,7 @@ Se ejecuta con un solo comando: `python app.py`.
 
 **Por qué `UNIQUE(anio, mes)`:** solo puede existir un rol por periodo. Regenerar borra la cabecera anterior (el detalle cae en cascada) en lugar de duplicar datos.
 
-**Versión del esquema:** `PRAGMA user_version` guarda `SCHEMA_VERSION` (hoy **7**). La versión 3 agregó organización; la 4 actualizó la semilla; la 5 agregó parámetros, escalas e históricos de cálculo; la 6 inicializó IECE en 0 %. La **7 agrega el expediente de paz y salvo mediante una migración aditiva desde la 6**, conservando empleados, parámetros y roles. Crea antes `roles_v6_pre_paz_salvo_respaldo.db`. Para versiones anteriores a 6 se conserva el comportamiento histórico: respaldo `roles_v<N>_respaldo.db` y recreación con semilla. Consulta [Paz y salvo: guía y fuentes](PAZ_Y_SALVO.md).
+**Versión del esquema:** `PRAGMA user_version` guarda `SCHEMA_VERSION` (hoy **8**). La versión 3 agregó organización; la 4 actualizó la semilla; la 5 agregó parámetros, escalas e históricos de cálculo; la 6 inicializó IECE en 0 %. La 7 agregó el expediente de paz y salvo. La **8 amplía el flujo con ocho departamentos, requisitos individuales, resultados respaldados por el PDF del Ministerio y resumen final**, mediante migración aditiva desde 6 y 7. Conserva empleados, parámetros, roles y expedientes, con respaldo previo `roles_vN_pre_paz_salvo_respaldo.db`. Para versiones anteriores a 6 se mantiene el respaldo y recreación históricos. Consulta [Paz y salvo: guía y fuentes](PAZ_Y_SALVO.md).
 
 ---
 

@@ -121,7 +121,7 @@ CREATE TABLE IF NOT EXISTS roles_detalle (
 );
 """
 
-SCHEMA_VERSION = 7  # v7: migración aditiva de paz y salvo, conserva empleados y roles de v6
+SCHEMA_VERSION = 8  # requisitos individuales, liquidación y resumen final; migración aditiva v6/v7
 
 # Equipo de FERIAUTO: los 4 socios fundadores, contratados bajo el Código del Trabajo desde el inicio
 # de actividades (01-09-2026), y el primer empleado (ficticio). Sueldos sobre el mínimo sectorial de cada
@@ -204,16 +204,17 @@ def init_db():
         with sqlite3.connect(DB_PATH) as conn:
             version = conn.execute("PRAGMA user_version").fetchone()[0]
         conn.close()
-        if version == 6:
+        if version in (6, 7):
             # SQLite backup también incluye cambios de un posible journal/WAL.
             with closing(sqlite3.connect(DB_PATH)) as origen, closing(sqlite3.connect(
-                    DB_PATH.with_name("roles_v6_pre_paz_salvo_respaldo.db"))) as respaldo:
+                    DB_PATH.with_name(f"roles_v{version}_pre_paz_salvo_respaldo.db"))) as respaldo:
                 origen.backup(respaldo)
         elif version != SCHEMA_VERSION:  # versiones anteriores mantienen el comportamiento histórico
             DB_PATH.replace(DB_PATH.with_name(f"roles_v{version}_respaldo.db"))
     with sqlite3.connect(DB_PATH) as conn:
         conn.executescript(SCHEMA)
         conn.executescript(paz_salvo.SCHEMA)
+        paz_salvo.migrar(conn)
         conn.execute(f"PRAGMA user_version = {SCHEMA_VERSION}")
         if conn.execute("SELECT COUNT(*) FROM parametros").fetchone()[0] == 0:
             iniciales = {**PARAMETROS_INICIALES, **valores_legales(PARAMETROS_INICIALES["regimen"])}

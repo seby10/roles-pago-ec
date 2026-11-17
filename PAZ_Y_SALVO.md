@@ -1,62 +1,85 @@
-# Paz y salvo laboral: uso, integración y fuentes
+# Expediente de paz y salvo y liquidación APE 4
 
-Revisión de fuentes: 17 de noviembre de 2026. Ámbito del proyecto: Ecuador; empresa de ejemplo FERIAUTO y régimen seleccionado en Parámetros.
+Versión de base 8. Revisión y consulta oficial: 17 de noviembre de 2026. Demostración prevista: miércoles 18 de noviembre de 2026.
 
-El módulo genera una constancia interna de entregas y revisiones. El acta de finiquito y la liquidación laboral siguen su procedimiento legal propio. Tener un expediente en estado «firmado» significa que el operador archivó una copia y declaró haber verificado las firmas, no que una autoridad haya validado el cese ni que estén cumplidas todas las obligaciones laborales.
+## Demostración en cinco pasos
 
-## Cómo utilizarlo
+1. Entrar en **Modo edición → Paz y salvo → Caso ficticio APE 4 → Preparar caso**. El sistema crea un empleado ficticio independiente e inactivo para que no se incorpore a los roles ordinarios. Prepara el expediente con 11 archivos y deja pendientes las verificaciones; no modifica empleados anteriores.
+2. Abrir Tecnología, visualizar el inventario PDF y la imagen del dispositivo, adjuntar otra evidencia si se desea y demostrar un requisito individual. Un archivo de dispositivos no aprueba cuentas, ofimática ni revocación de accesos.
+3. Completar los requisitos y aprobar cada área. Para abreviar la exposición existe **Completar recorrido ficticio de revisiones**, exclusivo del caso APE 4 y con confirmación expresa de simulación. No está disponible en expedientes ordinarios, no firma documentos y no aprueba la liquidación.
+4. Entrar en **Vacaciones y liquidación**. Consultar el PDF original del Ministerio cargado en Finanzas. La lectura asistida del PDF prepara valores en borrador, sin calcular derechos. Verificar la consulta, el kárdex, las evidencias y aprobar los resultados.
+5. Volver al expediente y **Emitir certificado, liquidación y resumen final**. Descargar o visualizar los tres PDF. El **resumen general** reúne áreas, vacaciones, haberes, deducciones y neto con espacios para ambas firmas. Después de recabar las firmas reales, cargar esa copia. No se generan firmas ficticias ni se presentan archivos sin firma como firmados.
 
-1. Iniciar con `iniciar.bat` o `iniciar.sh`; los lanzadores instalan las dependencias actualizadas. Abrir **Paz y salvo → Nuevo expediente**, o **Empleados → Paz y salvo**.
-2. Seleccionar trabajador y fecha de salida. Indicar el motivo informado; esto no resuelve automáticamente la causal jurídica de terminación.
-3. Confirmar cuatro responsables activos: jefatura, Tecnología y bienes, Finanzas y Talento humano. El sistema sugiere el jefe de `reporta_a` y las cabezas de Tecnología/Finanzas cuando encuentra una sola por departamento. Si se usa otro responsable de jefatura, justificar la designación. Cuando sale la máxima autoridad se debe designar a otra persona con facultades verificadas. El trabajador no puede revisar ni representar al empleador en su propio expediente.
-4. Elegir quién firmará por el empleador. Verificar su representación o delegación y adjuntar respaldo cuando corresponda; seleccionar un cargo no demuestra sus facultades.
-5. Adjuntar uno o más respaldos por área. Marcar **conforme** requiere archivo y confirmación de la revisión. **No aplica** exige justificación y confirmación. **Pendiente** y **observado** bloquean la emisión.
-6. Reasignar en Empleados a los subordinados activos del trabajador que sale. La revisión de jefatura y la emisión comprueban esta condición.
-7. Emitir el PDF. Desde ese momento se inmovilizan las revisiones y los respaldos. Descargarlo, recabar ambas firmas, completar lugar/fecha y entregar copias a las partes.
-8. Revisar manualmente que ambas firmas y el contenido correspondan al PDF emitido; cargar la copia firmada en PDF y confirmar esa revisión. El archivo se conserva junto con el original emitido.
+## Cobertura de requisitos
 
-Si hay un error antes de archivar la copia firmada, anular indicando el motivo y crear otro expediente. Se conservan el historial y el PDF anterior como antecedentes. Comunicar a las partes la anulación de cualquier ejemplar que ya se hubiera distribuido. Un expediente firmado no se modifica ni anula desde este módulo.
+| Área | Verificaciones individuales |
+|---|---|
+| Jefatura | Informe final recibido; documentos y archivos transferidos; pendientes y subordinados reasignados |
+| Tecnología | Dispositivos y accesorios; correo, nube, VPN y cuentas; ofimática y licencias; respaldo y bloqueo o revocación de accesos |
+| Finanzas | Nómina, pagos previos y liquidación; anticipos, préstamos y deducciones documentadas |
+| Talento humano | Causal de terminación; kárdex y beneficios; entrega de documentos; seguimiento IESS y SUT |
+| Activos y almacén | Devolución de bienes y materiales; acta de entrega e inventario conciliado |
+| Seguridad | Llaves, tarjetas y credenciales; equipos de protección y accesos físicos |
+| Medicina ocupacional | Constancia administrativa del examen de retiro; no almacenar historias clínicas ni diagnósticos |
+| Compras y control institucional | Entrega de administración de contratos; declaración patrimonial cuando la exijan el puesto y el régimen |
 
-## Qué revisar y respaldar
+Se registran **21 requisitos**, de los cuales **19** deben resolverse antes de emitir y **2** son seguimiento posterior de trámites oficiales. Cada requisito registra estado, fecha, observación y evidencia. Conforme exige respaldo de la misma área; no aplica exige justificación y confirmación. Los requisitos pendientes u observados bloquean la aprobación de su área y la emisión. Los subordinados activos deben reasignarse en Empleados antes de aprobar jefatura o emitir.
 
-| Área | Revisión sugerida | Respaldos según el caso |
-|---|---|---|
-| Jefatura | Entrega de funciones, proyectos y documentación; continuidad de tareas; reasignación de subordinados | Acta de entrega, inventario de documentos, designación de responsable alternativo |
-| Tecnología y bienes | Equipos, llaves, activos y cuentas; programar revocación de accesos en la fecha efectiva | Inventario y recepción firmados; confirmación de baja de accesos. No adjuntar contraseñas |
-| Finanzas | Conciliar nómina, pagos, anticipos y préstamos; revisar justificación de cualquier descuento | Conciliación y comprobantes. Un rol generado no demuestra pago y su neto no equivale a la liquidación |
-| Talento humano | Causal, fecha, beneficios pendientes, vacaciones, liquidación pormenorizada, finiquito y trámites aplicables | Aviso de salida IESS, acta SUT y comprobante de pago cuando proceda, constancias de entrega de documentos |
+La relación `reporta_a` propone al jefe inmediato. Los responsables activos se confirman al crear el expediente. Una jefatura alternativa requiere justificación; la representación del empleador debe verificarse. Se conservan copias históricas de nombres, cargos, empresa, remuneración, mensualización, región, causal y responsables.
 
-La revisión interna puede prepararse antes de la salida. Una baja de accesos o un trámite aún no efectuado debe quedar pendiente u observado; evitar afirmar su ejecución anticipadamente. El expediente no calcula indemnizaciones, no descuenta de nómina y no inactiva al empleado. La inactivación se hace en Empleados cuando corresponda a la fecha efectiva. El pago y los trámites legales se atienden independientemente de pendientes internos.
+## Fuente de la liquidación
 
-## Fuentes oficiales y consecuencias de diseño
+Los derechos laborales se obtienen de [la calculadora oficial del Ministerio del Trabajo](https://calculadoras.trabajo.gob.ec/liquidaciones). **El proyecto no calcula décimos, vacaciones, bonificaciones ni indemnizaciones.**
 
-| Fuente | Hallazgo | Decisión aplicada |
-|---|---|---|
-| [Constitución del Ecuador, art. 326.2 y 326.11](https://www.presidencia.gob.ec/wp-content/uploads/2024/07/CONSTITUCION_DE_LA_REPUBLICA_DEL_ECUADOR-2024-05-30.pdf) | Los derechos laborales son irrenunciables; la transacción laboral tiene condiciones y no puede implicar renuncia | El PDF delimita su alcance a entregas/revisiones, preserva derechos y no autoriza descuentos |
-| [Código del Trabajo, art. 595, copia alojada por SERCOP](https://portal.compraspublicas.gob.ec/sercop/wp-content/uploads/2026/03/CT.pdf) | El documento de finiquito puede ser impugnado si la liquidación no fue practicada ante el inspector; debe ser pormenorizada | Se separa la constancia interna del finiquito y de la liquidación legal |
-| [Acuerdo MDT-2025-053, arts. 2, 3 y 6](https://www.trabajo.gob.ec/wp-content/uploads/2025/06/ACUERDO-MINISTERIAL-MDT-2025-053.pdf) | Reforma el art. 19 del MDT-2023-140: acta firmada y comprobante de pago en PDF se cargan en el sistema ministerial; plazo máximo de registro de quince días desde la terminación. Incluye custodia a cargo del empleador y entrega de documentación al trabajador | Recordatorio SUT para CT; archivos conservados en el expediente y entrega de copia indicada en el PDF. El SHA-256 local no es el HASH emitido por el Ministerio |
-| [IESS: avisos de entrada y salida](https://www.iess.gob.ec/web/empleador/avisos-de-entrada-y-salida) | El aviso de salida se comunica dentro del término de tres días posteriores al hecho, conforme al art. 73 de la Ley de Seguridad Social | Recordatorio separado del SUT; se evita calcular automáticamente ese término sin un calendario laboral aplicable |
-| [Ley Orgánica de Protección de Datos Personales, art. 10](https://www.gob.ec/sites/default/files/regulations/2025-01/01%20Ley%20Org%C3%A1nica%20de%20Protecci%C3%B3n%20de%20Datos%20Personales.pdf) | Finalidad, minimización, conservación y seguridad de los datos | Expedientes privados en modo publicado, sin enlaces públicos a archivos ni caché; no incorporar documentos innecesarios |
-| [OWASP: File Upload Cheat Sheet](https://cheatsheetseries.owasp.org/cheatsheets/File_Upload_Cheat_Sheet.html) | Validar autorización, tamaño, extensión y contenido; proteger almacenamiento y descargas; defensa en profundidad | CSRF en las acciones del módulo; PDF/PNG/JPG; validación por lector PDF/imagen; límites por archivo/expediente; archivos en SQLite fuera de `static`; descarga como adjunto |
+El operador consulta el portal, descarga su PDF o guarda capturas de entradas/resultados y los adjunta en Finanzas. El sistema conserva el archivo original y puede leer el formato PDF con texto observado en el portal; formatos no reconocidos o imágenes requieren registro manual. La lectura no acredita autenticidad y siempre exige cotejo visual antes de aprobar. El PDF ministerial no muestra necesariamente los datos de entrada: conviene conservar también su captura.
 
-El recordatorio de quince días se aplica al régimen CT y se calcula desde la fecha de salida informada, no desde la creación del expediente. No sustituye confirmar que esa fecha es efectiva ni revisar particularidades del caso. LOSEP, LOEP y LOES requieren examinar su normativa y procedimiento específico; el módulo no les impone automáticamente el plazo de CT. La revisión de fuentes no equivale a certificar cumplimiento de un caso laboral concreto.
+Se registran los rubros oficiales y su total. El programa comprueba únicamente su suma. Se admiten saldos de nómina, otros haberes y deducciones empresariales con respaldo, distinguiéndolos del resultado del simulador; no se generan tasas ni descuentos automáticamente. El kárdex contiene días anteriores, devengados declarados, gozados y ajustes; su saldo debe coincidir con los días usados en la consulta. No se devengan días en esta aplicación.
 
-## Integración técnica y conservación
+La aprobación exige evidencia del resultado ministerial, conciliación financiera y kárdex del mismo expediente. El portal consultado se basa en contratos individuales del Código del Trabajo y denomina sus resultados aproximados y no vinculantes. No se trasladan sus reglas a LOSEP, LOEP o LOES. Para esos regímenes se requiere el procedimiento y la fuente aplicables; este flujo de resultados ministeriales se limita a CT.
 
-- `paz_salvo.py` registra un Blueprint Flask. Las vistas reutilizan la barra lateral, estilos, filtros y empleados del sistema actual.
-- Cuatro tablas: `paz_expedientes`, `paz_revisiones`, `paz_adjuntos` y `paz_eventos`. Adjuntos almacenados como BLOB: la copia de seguridad completa de SQLite incluye los archivos, sin rutas controladas por nombres aportados por el usuario.
-- Esquema **7**: migración aditiva desde **6**. Antes de migrar crea `roles_v6_pre_paz_salvo_respaldo.db` mediante SQLite backup y conserva empleados, parámetros, escalas y roles. Las versiones anteriores a 6 conservan el comportamiento histórico de respaldo y recreación; para datos reales en esas versiones hace falta una migración específica.
-- Datos del empleado, empresa y responsables copiados al crear el expediente; modificaciones posteriores no reescriben esa historia. Se conserva el PDF exacto emitido y su SHA-256, además del hash de cada respaldo.
-- Máximo 10 MB por archivo y 50 archivos por expediente. PDF firmado exclusivamente PDF; los respaldos pueden ser PDF, PNG o JPEG. PDF cifrado, vacío, inválido, de más de 200 páginas o con ciertas acciones/adjuntos a nivel raíz se rechaza. Esta validación no es un antivirus ni garantiza ausencia de todo contenido activo.
-- En publicación con `EDIT_PASSWORD`, todas las vistas, PDF y descargas del módulo exigen sesión de edición. Sin esa variable continúa el uso local académico. Los responsables no reciben cuentas, correos ni enlaces de aprobación: el operador registra sus revisiones y evidencias. La bitácora identifica el modo de operación, no inventa una identidad individual autenticada.
-- Las transiciones de revisión, emisión, carga y anulación se serializan con transacciones SQLite. El índice de unicidad impide dos expedientes abiertos para el mismo empleado.
-- Los roles recientes se consultan como referencia, sin copiarlos como saldos exigibles ni alterar los cálculos de nómina.
-- No hay borrado de adjuntos desde el módulo. **Reiniciar demo sí borra la base completa, incluidos expedientes y archivos**, con advertencia explícita. Respaldar antes de usarlo. El respaldo previo a migración tampoco sustituye respaldos periódicos posteriores.
+## Caso ficticio documentado
 
-Para operar con datos laborales reales, el sistema académico necesita cuentas individuales y autorización por expediente/área, trazabilidad de identidad, respaldo y restauración probados, HTTPS, controles de acceso a la base, análisis de archivos y una política de conservación documentada que armonice la normativa laboral con protección de datos. El historial SQLite no es un registro inviolable frente a administradores con acceso al archivo. La validación de firmas manuscritas es manual. Estas capacidades no se presentan como implementadas en esta versión.
+Mateo Demostración Rivera, CI ficticia con dígito verificador 1729999902, programador de FERIAUTO. Ingreso 01/10/2026, salida 17/11/2026, USD 510, Sierra, acuerdo entre las partes, ambos décimos acumulados y 1,96 días sin gozar. Según el supuesto, los salarios y aportes de nómina ya fueron atendidos y no quedan deducciones.
 
-## Verificación
+| Resultado del simulador | USD |
+|---|---:|
+| Décimo tercero | 66,58 |
+| Décimo cuarto | 62,93 |
+| Vacaciones | 33,32 |
+| Indemnizaciones en el caso principal | 0,00 |
+| Total aproximado mostrado | **162,83** |
 
-Instalar `requirements.txt` y ejecutar `python -m unittest test_paz_salvo -v`. Las pruebas usan bases temporales y no abren la base de trabajo. Cubren flujo PDF/archivo firmado, migración, copia histórica, subordinados, duplicados, justificaciones, restricciones de edición, formatos/tamaños, CSRF y acceso privado.
+Una segunda consulta con las mismas fechas, remuneración y vacaciones, cambiando a despido intempestivo sin protecciones especiales, mostró USD 1.530,00 por despido y un total aproximado de USD 1.692,83. Ambos PDF se descargaron directamente mediante el botón de impresión de la calculadora. Las cifras se leyeron de esos documentos, no se derivaron con fórmulas propias.
 
-`ROLES_DB_PATH` permite indicar una base alternativa para pruebas o demostraciones sin alterar `roles.db`.
+Los documentos de entrega, cuentas, seguridad, salud, nómina y kárdex son ficticios y así se identifican. El PDF del simulador es una consulta real con datos hipotéticos. No se simulan registros oficiales IESS/SUT ni un examen médico real.
+
+## Documentos, evidencias y estados
+
+- PDF certificado: departamentos y checklist con referencias a evidencias.
+- PDF liquidación administrativa: valores oficiales y saldos empresariales diferenciados, deducciones, neto y espacios de firma.
+- PDF resumen general: consolidación para firma de trabajador y representante del empleador. Es la copia que se carga como resumen firmado.
+- PDF original del simulador: se conserva intacto como evidencia, separado de los documentos generados por el sistema.
+- Consulta de PDF e imágenes, descarga individual y exportación del expediente con documentos, evidencias e índice de historial en ZIP.
+
+La emisión inmoviliza los datos de las verificaciones, la liquidación y los PDF. Los cambios previos se registran en bitácora; puede anularse un expediente pendiente o emitido, conservando antecedentes. El resumen firmado no se modifica desde este módulo. Los dos requisitos de seguimiento IESS/SUT pueden recibir respaldos y actualizarse después, sin reescribir el resumen original. El paz y salvo interno no condiciona el pago de derechos ni sustituye los trámites oficiales.
+
+## Fuentes y protección de datos
+
+- [Constitución del Ecuador, art. 326](https://www.presidencia.gob.ec/wp-content/uploads/2024/07/CONSTITUCION_DE_LA_REPUBLICA_DEL_ECUADOR-2024-05-30.pdf): irrenunciabilidad de derechos y condiciones de la transacción laboral.
+- [MDT-2025-053, art. 6](https://www.trabajo.gob.ec/wp-content/uploads/2025/06/ACUERDO-MINISTERIAL-MDT-2025-053.pdf): acta firmada y comprobante de pago en PDF en el sistema ministerial; plazo de registro de quince días desde la terminación. El recordatorio de la aplicación se limita a CT y requiere verificar la fecha efectiva.
+- [IESS, aviso de salida](https://www.iess.gob.ec/web/empleador/avisos-de-entrada-y-salida): término de tres días posteriores al hecho, cuyo cómputo aplicable debe verificarse.
+- [Ministerio, preguntas frecuentes SST](https://www.trabajo.gob.ec/wp-content/uploads/2025/11/Preguntas-Frecuentes_Nov2025.pdf): vigilancia de salud y exámenes de retiro. Registrar solo constancias administrativas sin diagnósticos.
+- [Ley Orgánica de Protección de Datos Personales](https://www.gob.ec/sites/default/files/regulations/2025-01/01%20Ley%20Org%C3%A1nica%20de%20Protecci%C3%B3n%20de%20Datos%20Personales.pdf): finalidad, minimización, conservación y seguridad.
+- [OWASP File Upload Cheat Sheet](https://cheatsheetseries.owasp.org/cheatsheets/File_Upload_Cheat_Sheet.html): validación de tamaño, extensión y contenido y control de acceso.
+
+PDF, PNG y JPEG hasta 10 MB; máximo 50 archivos por expediente. Los PDF cifrados, vacíos, inválidos, de más de 200 páginas o con ciertas acciones/adjuntos raíz se rechazan. Imágenes validadas con su lector. Los archivos se almacenan en SQLite, fuera de `static`, con SHA-256. Este hash es local y no equivale al generado por el Ministerio. La validación de archivos no sustituye un antivirus.
+
+Con `EDIT_PASSWORD`, todo el expediente, las vistas y las descargas requieren sesión de edición. Las acciones del módulo tienen CSRF y las respuestas privadas no se almacenan en caché. Las aprobaciones se registran centralmente por el operador; no hay cuentas individuales de aprobadores ni validación criptográfica de firmas. Para datos reales se requieren esas autorizaciones individuales, HTTPS, respaldo y restauración probados, controles de acceso a la base y una política documentada de conservación. SQLite y su bitácora no son inviolables frente a administradores del archivo.
+
+## Migración y pruebas
+
+La base **8** migra de forma aditiva desde **6 y 7**, con respaldo `roles_vN_pre_paz_salvo_respaldo.db`; conserva empleados, roles, expedientes, estados y archivos. Los expedientes históricos del flujo 1 conservan su funcionamiento y PDF original. Los nuevos usan flujo 2. Para versiones anteriores a 6 se mantiene el respaldo y recreación históricos; requieren una migración específica si se desea conservar datos operativos.
+
+Instalar dependencias y ejecutar `python -m unittest test_paz_salvo test_expediente_completo -v`. Las 23 pruebas usan bases temporales: flujo histórico, flujo completo, migración, requisitos, estados, formatos, límites, acceso, PDF original, lectura asistida, coherencia de totales, seguimiento posterior y simulación limitada al caso ficticio.
+
+`Reiniciar demo` borra toda la base, incluidos expedientes y adjuntos, con advertencia. No usarlo para actualizar PythonAnywhere. `ROLES_DB_PATH` permite una base aislada de pruebas.

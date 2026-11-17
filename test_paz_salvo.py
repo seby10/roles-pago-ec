@@ -51,6 +51,9 @@ class PazSalvoTest(unittest.TestCase):
         self.tmp.cleanup()
 
     def post(self, path, **data):
+        if path=='/paz-salvo/nuevo':
+            for k,v in dict(causa='mutuo_acuerdo',bienes='3',seguridad='1',salud='1',compras='3').items():
+                data.setdefault(k,v)
         with closing(EnvironBuilder(path=path, method='POST', data={'csrf': self.csrf, **data})) as builder:
             entorno = builder.get_environ()
             try:
@@ -59,9 +62,16 @@ class PazSalvoTest(unittest.TestCase):
                 entorno['wsgi.input'].close()
 
     def crear(self, empleado=5):
-        return self.post('/paz-salvo/nuevo', empleado=str(empleado), fecha_salida='2026-11-17',
+        respuesta=self.post('/paz-salvo/nuevo', empleado=str(empleado), fecha_salida='2026-11-17',
                          motivo='Cierre de relación informado', jefatura='2', tecnologia='2',
                          finanzas='3', talento='1', representante='1')
+        # Estas pruebas conservan un expediente v1 para verificar compatibilidad histórica.
+        if respuesta.status_code==302:
+            with conexion(sistema.DB_PATH) as conn:
+                conn.execute('DELETE FROM paz_requisitos')
+                conn.execute("DELETE FROM paz_revisiones WHERE area NOT IN ('jefatura','tecnologia','finanzas','talento')")
+                conn.execute('UPDATE paz_expedientes SET version_flujo=1')
+        return respuesta
 
     def consulta(self, sql):
         with conexion(sistema.DB_PATH) as conn:
@@ -184,7 +194,7 @@ class PazSalvoTest(unittest.TestCase):
             conn.execute("UPDATE empleados SET nombres='Personalizado' WHERE id=5")
             conn.execute("INSERT INTO roles_cabecera(anio,mes,generado_en,n_empleados,total_ingresos,total_descuentos,total_neto,total_costo,total_iess,total_ir) VALUES (2026,10,'2026-11-01',1,500,50,450,600,100,0)")
         sistema.init_db()
-        self.assertEqual(self.consulta('PRAGMA user_version')[0][0], 7)
+        self.assertEqual(self.consulta('PRAGMA user_version')[0][0], 8)
         self.assertEqual(self.consulta('SELECT nombres FROM empleados WHERE id=5')[0][0], 'Personalizado')
         self.assertEqual(self.consulta('SELECT total_neto FROM roles_cabecera')[0][0], 450)
         self.assertTrue(sistema.DB_PATH.with_name('roles_v6_pre_paz_salvo_respaldo.db').exists())
