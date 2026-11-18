@@ -53,6 +53,30 @@ class ExpedienteCompletoTest(unittest.TestCase):
         self.assertEqual(original,(caso_ape4.DIRECTORIO/'liquidacion-oficial.pdf').read_bytes())
         self.assertEqual(self.client.get('/paz-salvo/1/descargar-expediente').mimetype,'application/zip')
 
+    def test_interfaz_guia_emision_y_descarga_segun_estado(self):
+        self.preparar()
+        html=self.client.get('/paz-salvo/1').get_data(as_text=True)
+        self.assertIn('Continuar revisiones',html)
+        self.assertIn('19 requisitos previos',html)
+        self.assertIn('type="submit" disabled>Generar certificado',html)
+        self.verificar();self.aprobar()
+        html=self.client.get('/paz-salvo/1').get_data(as_text=True)
+        self.assertIn('Listo para emitir',html)
+        self.assertNotIn('type="submit" disabled>Generar certificado',html)
+        self.post('/paz-salvo/1/emitir')
+        html=self.client.get('/paz-salvo/1').get_data(as_text=True)
+        self.assertIn('Descargar resumen para firma',html)
+        self.assertIn('Archivar el resumen firmado',html)
+        self.assertNotIn('>Generar certificado, liquidación y resumen</button>',html)
+
+    def test_formulario_liquidacion_conserva_todos_los_importes(self):
+        self.preparar()
+        html=self.client.get('/paz-salvo/1/liquidacion').get_data(as_text=True)
+        for campo in liquidacion.CAMPOS:
+            self.assertEqual(html.count(f'name="{campo}"'),1,campo)
+        self.assertIn('Control de vacaciones (días)',html)
+        self.assertIn('Saldos adicionales y deducciones (USD)',html)
+
     def test_requisito_pendiente_bloquea_area_y_emision(self):
         self.preparar()
         self.post('/paz-salvo/1/revision/1',estado='conforme',observacion='Todos revisados',confirmacion='1')

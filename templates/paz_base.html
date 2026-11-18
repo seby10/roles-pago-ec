@@ -1,0 +1,30 @@
+{% extends 'base.html' %}
+{% block body_class %}paz-app{% endblock %}
+{% block head %}<link href="{{ url_for('static', filename='paz.css') }}" rel="stylesheet">{% endblock %}
+{% block scripts %}
+<script>
+// Los enlaces directos y las respuestas de formularios abren el área correspondiente.
+(function () {
+  function reveal() {
+    var id; try { id = decodeURIComponent(location.hash.slice(1)); } catch (_) { return; }
+    var area = id && document.getElementById(id);
+    if (area && area.matches('details')) { area.open = true; area.scrollIntoView({block:'start'}); }
+  }
+  window.addEventListener('hashchange', reveal); reveal();
+  document.querySelectorAll('a[href^="#area-"]').forEach(function (link) {
+    link.addEventListener('click', function () {
+      var area = document.getElementById(link.hash.slice(1)); if (area) area.open = true;
+    });
+  });
+  var search = document.querySelector('[data-expediente-search]');
+  if (search) search.addEventListener('input', function () {
+    var query = search.value.toLocaleLowerCase('es').trim(), count = 0;
+    document.querySelectorAll('[data-expediente]').forEach(function (row) {
+      row.hidden = !row.textContent.toLocaleLowerCase('es').includes(query); if (!row.hidden) count++;
+    });
+    document.querySelector('[data-search-count]').textContent = count + (count === 1 ? ' expediente' : ' expedientes');
+    document.querySelector('[data-search-empty]').hidden = count !== 0;
+  });
+})();
+</script>
+{% endblock %}

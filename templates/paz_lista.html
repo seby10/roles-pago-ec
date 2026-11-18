@@ -1,11 +1,11 @@
-{% extends 'base.html' %}
+{% extends 'paz_base.html' %}
 {% block title %}Paz y salvo{% endblock %}
 {% block content %}
-<div class="page-head"><div><div class="eyebrow">Personal · cierre laboral</div><h1 class="title">Paz y salvo</h1><p class="meta">Entregas, revisiones y documentos firmados por empleado.</p></div><div class="actions"><a class="btn" href="{{ url_for('paz.caso') }}">Caso ficticio APE 4</a><a class="btn btn-primary" href="{{ url_for('paz.nuevo') }}">Nuevo expediente</a></div></div>
-<div class="flash flash--warning">{{ PAZ_ALCANCE }}</div>
-<section class="panel"><div class="table-wrap"><table class="ledger stack"><thead><tr><th>Expediente</th><th>Empleado</th><th>Salida</th><th>Estado</th><th></th></tr></thead><tbody>
-{% for e in expedientes %}<tr><td data-label="Expediente">PS-{{ '%06d'|format(e.id) }}</td><td data-label="Empleado">{{ e.datos.nombres }} {{ e.datos.apellidos }}<div class="sub">{{ e.datos.cargo }}</div></td><td data-label="Salida">{{ e.fecha_salida|fecha }}</td><td data-label="Estado"><span class="tag">{{ e.estado|replace('_',' ') }}</span></td><td><a class="btn btn-sm" href="{{ url_for('paz.ver', id=e.id) }}">Abrir expediente</a></td></tr>
-{% else %}<tr><td colspan="5">Aún no hay expedientes. Selecciona un empleado para comenzar.</td></tr>{% endfor %}
-</tbody></table></div></section>
-<p class="hint">Registro administrativo centralizado. En modo publicado, estos expedientes requieren la clave de edición y no son visibles al público.</p>
+<div class="page-head"><div><h1 class="title">Paz y salvo</h1><p class="meta">Revisa las entregas por área y prepara el cierre laboral de cada empleado.</p></div><div class="actions"><a class="btn" href="{{ url_for('paz.caso') }}">Caso APE 4</a><a class="btn btn-primary" href="{{ url_for('paz.nuevo') }}">Nuevo expediente</a></div></div>
+{% if expedientes %}<div class="paz-toolbar"><label class="sr-only" for="buscar-expediente">Buscar expediente</label><input class="input" id="buscar-expediente" type="search" placeholder="Buscar por empleado, expediente o estado" data-expediente-search><span class="hint" data-search-count>{{ expedientes|length }} expedientes</span></div>
+<section class="panel"><div class="table-wrap"><table class="ledger stack"><thead><tr><th>Empleado</th><th>Expediente</th><th>Fecha de salida</th><th>Estado</th><th></th></tr></thead><tbody>
+{% for e in expedientes %}<tr data-expediente><td data-label="Empleado"><a href="{{ url_for('paz.ver',id=e.id) }}"><b>{{ e.datos.nombres }} {{ e.datos.apellidos }}</b></a><div class="sub">{{ e.datos.cargo }}</div></td><td data-label="Expediente">PS-{{ '%06d'|format(e.id) }}</td><td data-label="Salida">{{ e.fecha_salida|fecha }}</td><td data-label="Estado"><span class="paz-status" data-state="{{ e.estado }}">{{ e.estado|replace('_',' ')|capitalize }}</span></td><td><a class="btn btn-sm" href="{{ url_for('paz.ver',id=e.id) }}">Abrir expediente</a></td></tr>{% endfor %}
+</tbody></table></div><p class="paz-empty" data-search-empty hidden>No hay expedientes que coincidan con la búsqueda.</p></section>
+{% else %}<section class="panel paz-empty"><h2>Comienza un expediente laboral</h2><p>Selecciona al empleado, registra su salida y asigna las personas responsables de cada área.</p><a class="btn btn-primary" href="{{ url_for('paz.nuevo') }}">Crear primer expediente</a></section>{% endif %}
+<p class="paz-note">Cada expediente reúne requisitos, evidencias, liquidación y documentos para firma. El acceso publicado requiere la clave de edición.</p>
 {% endblock %}

@@ -80,6 +80,12 @@ Con `EDIT_PASSWORD`, todo el expediente, las vistas y las descargas requieren se
 
 La base **8** migra de forma aditiva desde **6 y 7**, con respaldo `roles_vN_pre_paz_salvo_respaldo.db`; conserva empleados, roles, expedientes, estados y archivos. Los expedientes históricos del flujo 1 conservan su funcionamiento y PDF original. Los nuevos usan flujo 2. Para versiones anteriores a 6 se mantiene el respaldo y recreación históricos; requieren una migración específica si se desea conservar datos operativos.
 
-Instalar dependencias y ejecutar `python -m unittest test_paz_salvo test_expediente_completo -v`. Las 23 pruebas usan bases temporales: flujo histórico, flujo completo, migración, requisitos, estados, formatos, límites, acceso, PDF original, lectura asistida, coherencia de totales, seguimiento posterior y simulación limitada al caso ficticio.
+Instalar dependencias y ejecutar `python -m unittest test_paz_salvo test_expediente_completo -v`. Las 25 pruebas usan bases temporales: flujo histórico, flujo completo, migración, requisitos, estados, formatos, límites, acceso, PDF original, lectura asistida, coherencia de totales, seguimiento posterior y simulación limitada al caso ficticio. También verifican las acciones disponibles según el estado y la conservación de todos los importes del formulario.
+
+## Lectura del expediente
+
+El encabezado identifica al trabajador y su salida; el bloque «Siguiente paso» indica la revisión pendiente. Las ocho áreas se despliegan individualmente y muestran responsable, avance y estado. Al volver de un formulario se abre automáticamente el área correspondiente. Los seguimientos posteriores permanecen diferenciados de los requisitos previos.
+
+La liquidación presenta primero el resultado documentado y agrupa la edición en importes ministeriales, vacaciones y saldos adicionales. Tras la emisión, la acción principal permite descargar el resumen general para firma y luego archivar la copia firmada. La búsqueda del listado filtra expedientes por empleado, número o estado. Estas mejoras mantienen las rutas, los registros y las validaciones existentes.
 
 `Reiniciar demo` borra toda la base, incluidos expedientes y adjuntos, con advertencia. No usarlo para actualizar PythonAnywhere. `ROLES_DB_PATH` permite una base aislada de pruebas.
