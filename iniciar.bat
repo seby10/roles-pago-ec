@@ -1,12 +1,19 @@
 @echo off
-rem Doble clic para abrir la demo de Roles de Pago en Windows.
+rem Doble clic para abrir el proyecto integrador en Windows.
 rem La primera vez crea un entorno (.venv) e instala Flask; las siguientes arranca directo.
 chcp 65001 >nul
 cd /d "%~dp0"
 
 set "PY="
-where py >nul 2>nul && set "PY=py -3"
-if not defined PY where python >nul 2>nul && set "PY=python"
+if exist ".venv\Scripts\python.exe" set "PY=.venv\Scripts\python.exe"
+if not defined PY (
+  where py >nul 2>nul
+  if not errorlevel 1 set "PY=py -3"
+)
+if not defined PY (
+  where python >nul 2>nul
+  if not errorlevel 1 set "PY=python"
+)
 if not defined PY goto :sinpython
 %PY% -c "import sys; sys.exit(sys.version_info < (3, 9))" >nul 2>nul || goto :sinpython
 
@@ -14,10 +21,11 @@ if not exist ".venv\Scripts\python.exe" (
   echo Preparando el entorno por primera vez, espera un momento...
   %PY% -m venv .venv || goto :error
 )
-".venv\Scripts\python.exe" -m pip install --disable-pip-version-check -q -r requirements.txt || goto :error
+".venv\Scripts\python.exe" -c "import flask, openpyxl, reportlab, pypdf" >nul 2>nul
+if errorlevel 1 ".venv\Scripts\python.exe" -m pip install --disable-pip-version-check -q -r requirements.txt || goto :error
 
 echo.
-echo  Demo de Roles de Pago en http://127.0.0.1:5050
+echo  Proyecto integrador FERIAUTO en http://127.0.0.1:5050
 echo  Para cerrarla, cierra esta ventana o presiona Ctrl+C.
 echo.
 start "" cmd /c "timeout /t 2 >nul & start http://127.0.0.1:5050"

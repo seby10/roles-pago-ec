@@ -1,0 +1,24 @@
+{
+  "pptx": "C:\\Users\\sebas\\Documentos\\VIDA\\8vo_SEMESTRE\\EMPRENDIMIENTO\\roles_pago\\entregables_integrador\\Presentacion_Integrador_FERIAUTO_Grupo1.pptx",
+  "slide_count": 10,
+  "native_text_shapes": 99,
+  "native_tables": 5,
+  "speaker_notes_all_slides": true,
+  "pdf_pages": 10,
+  "rendered_with": "Microsoft PowerPoint native export",
+  "visually_reviewed_slides": [
+    1,
+    2,
+    3,
+    4,
+    5,
+    6,
+    7,
+    8,
+    9,
+    10
+  ],
+  "pptx_sha256": "eb2a04bb70f2365f38a71c2fc96a2b8f251e1a8d49dd68924451853deceabdcd",
+  "source_builder": "presentacion_build/redisenar_presentacion.mjs",
+  "backup": "respaldo_presentacion_antes_redisenio"
+}

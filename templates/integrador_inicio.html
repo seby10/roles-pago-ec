@@ -1,0 +1,33 @@
+{% extends "integrador_base.html" %}
+{% block title %}Proyecto integrador{% endblock %}
+{% block content %}
+<div class="int-kicker"><span class="int-live"></span> Grupo 1 · Software · Octavo A · UTA</div>
+<section class="int-hero">
+  <div>
+    <div class="eyebrow">Emprendimiento y Legislación Laboral</div>
+    <h1>Un proyecto.<br><em>Cuatro perspectivas.</em></h1>
+    <p class="int-lead">El recorrido de FERIAUTO: desde la idea de negocio hasta el cierre de la relación laboral. Los trabajos del semestre, conectados en un solo lugar.</p>
+    <div class="actions"><a class="btn btn-primary" href="{{ url_for('integrador.modulo', clave='emprendimiento') }}">Comenzar recorrido <span aria-hidden="true">↗</span></a><a class="btn" href="{{ url_for('integrador.biblioteca') }}">Explorar documentos</a></div>
+  </div>
+  <div class="int-map" aria-label="Secuencia del proyecto">
+    <div class="int-map-label">FERIAUTO S.A.S.<span>Proyecto académico · Ambato</span></div>
+    {% for m in modulos %}<a href="{{ url_for('integrador.modulo', clave=m.id) }}"><span class="int-step">{{ m.numero }}</span><span>{{ m.titulo }}</span><span aria-hidden="true">↗</span></a>{% endfor %}
+  </div>
+</section>
+<div class="int-strip"><span><b>4</b> módulos conectados</span><span><b>{{ n_documentos }}</b> documentos de consulta</span><span><b>{{ recursos|length }}</b> carpetas de videos</span></div>
+<div class="int-section-head"><h2>Explora los módulos</h2><span class="sub">Sigue el recorrido o elige un tema</span></div>
+<section class="int-cards" aria-label="Módulos del proyecto">
+{% for m in modulos %}
+  <a class="int-card int-card--{{ m.tono }}" href="{{ url_for('integrador.modulo', clave=m.id) }}">
+    <div class="int-card-top"><span class="int-number">{{ m.numero }}</span><span class="int-arrow" aria-hidden="true">↗</span></div>
+    <h3>{{ m.titulo }}</h3><p>{{ m.descripcion }}</p>
+    <div class="int-card-foot"><span>{{ conteos[m.id] }} documentos</span><span>Abrir módulo →</span></div>
+  </a>
+{% endfor %}
+</section>
+{% include "integrador_videos.html" %}
+<section class="int-bottom">
+  <div><div class="eyebrow">La lógica de la integración</div><h2>Una evidencia detrás de cada resultado.</h2><p>El plan explica el negocio; la documentación tributaria registra sus operaciones; la nómina organiza al equipo y sus costos; el expediente laboral reúne las evidencias del cierre. Cada módulo permite consultar los trabajos que lo sustentan.</p><p class="sub">Se integran los trabajos ya realizados. Las simulaciones y los escenarios de cada etapa conservan su contexto.</p></div>
+  <div class="int-delivery"><h2>Material para la entrega</h2><a href="{{ url_for('integrador.entrega', clave='informe') }}">Informe integrador <span>PDF ↗</span></a><a href="{{ url_for('integrador.entrega', clave='presentacion') }}">Presentación para la defensa <span>PPTX ↗</span></a><a href="{{ url_for('integrador.entrega', clave='laminas') }}">Láminas de consulta <span>PDF ↗</span></a><a href="{{ url_for('integrador.entrega', clave='guion') }}">Guion de exposición <span>MD ↗</span></a></div>
+</section>
+{% endblock %}

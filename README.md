@@ -1,4 +1,10 @@
-# Roles de Pago Ecuador 2026 (demo académica)
+# FERIAUTO · Proyecto integrador del semestre
+
+La portada `/` reúne **Emprendimiento, Obligaciones tributarias, Remuneraciones y nómina y Liquidación laboral**. Cada módulo explica los resultados ya entregados y enlaza sus fuentes. La biblioteca `/biblioteca` permite buscar 33 documentos, filtrar por módulo/tipo, consultar páginas y descargar los originales. El informe final y las láminas se descargan desde la portada.
+
+Las herramientas de nómina y paz y salvo se conservan. El resumen operativo anterior ahora está en `/nomina/resumen` (endpoint `resumen`). La integración no modifica las fórmulas, el esquema de datos ni los históricos, y no crea nuevos casos ni roles. Consulta [INTEGRACION.md](INTEGRACION.md) para el inventario, los entregables y la actualización del alojamiento.
+
+## Herramientas laborales existentes
 
 Módulo demostrativo para un taller de clase: calcula el rol de pagos mensual de una nómina ecuatoriana (ingresos, descuentos IESS e IR, neto a recibir y costo del empleador) y lo acompaña con un resumen de gestión, el organigrama, escalas salariales y parámetros editables. Soporta cuatro regímenes laborales (Código del Trabajo, LOSEP, LOEP y LOES). Está hecho con Flask, SQLite y CSS propio (sin Bootstrap ni npm).
 
@@ -61,14 +67,14 @@ La app se organiza con una barra lateral a la izquierda. En escritorio se puede 
 
 | Pestaña | Ruta | Para qué sirve |
 | --- | --- | --- |
-| Resumen | `/` | Página de inicio: cifras del mes, costo por departamento, próximas obligaciones, últimos roles, alertas y sostenibilidad del contrato (sección 2.2). |
+| Resumen de nómina | `/nomina/resumen` | Cifras del mes, costo por departamento, próximas obligaciones, últimos roles, alertas y sostenibilidad del contrato (sección 2.2). |
 | Empleados | `/empleados` | Alta, edición, activar/inactivar y eliminar (sección 2.3, paso 1). |
 | Organigrama | `/organigrama` | Árbol de cargos, tabla de remuneraciones y "¿Es sostenible?" (sección 2.3, extra). |
 | Roles de pago | `/roles` | Historial de roles generados y acceso a *Generar rol del mes* (sección 2.3, pasos 2 a 6). Antes esta lista estaba en `/`. |
 | Escalas salariales | `/escalas` | La escala de cada régimen, editable (sección 5.9). |
 | Parámetros | `/parametros` | Datos de la empresa, logo, régimen y valores de cálculo (sección 2.4). |
 
-### 2.2 Resumen (`/`)
+### 2.2 Resumen de nómina (`/nomina/resumen`)
 
 Es lo primero que se ve y se calcula con los empleados activos, sin novedades del mes (30 días, sin horas extra), con el mismo motor que el rol.
 

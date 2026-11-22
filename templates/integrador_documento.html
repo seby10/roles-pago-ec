@@ -1,0 +1,17 @@
+{% extends "integrador_base.html" %}
+{% block title %}{{ doc.titulo }}{% endblock %}
+{% block content %}
+<nav class="int-breadcrumb" aria-label="Ruta de navegación"><a href="{{ url_for('integrador.inicio') }}">Proyecto</a><span>/</span><a href="{{ url_for('integrador.modulo', clave=modulo.id) }}">{{ modulo.titulo }}</a><span>/</span><span>Documento</span></nav>
+<div class="page-head"><div><div class="eyebrow">{{ doc.tipo }} · {{ doc.archivo.rsplit('.',1)[-1]|upper }}</div><h1 class="title int-document-title">{{ doc.titulo }}</h1><p class="meta">{{ doc.contexto }}</p></div><div class="actions"><a class="btn" href="{{ url_for('integrador.modulo', clave=modulo.id) }}#evidencias">Volver al módulo</a><a class="btn btn-primary" href="{{ url_for('integrador.archivo', clave=doc.id, descargar=1) }}">Descargar original ↓</a></div></div>
+<p class="int-document-description">{{ doc.descripcion }}</p>
+<div class="int-document-meta"><span>Original: <b>{{ doc.fuente.rsplit('/',1)[-1] }}</b></span>{% if doc.paginas %}<span>{{ doc.paginas }} páginas</span>{% endif %}<span>{{ '%.1f'|format(doc.bytes / 1048576) }} MB</span></div>
+{% if doc.archivo.endswith('.pdf') %}
+<div class="int-pdf-tools"><form method="get"><label for="pagina">Ir a página</label><input type="number" id="pagina" name="pagina" min="1" max="{{ doc.paginas }}" value="{{ pagina }}"><button class="btn" type="submit">Ver</button></form><a href="{{ url_for('integrador.archivo', clave=doc.id) }}#page={{ pagina }}" target="_blank" rel="noopener">Abrir PDF en otra pestaña ↗</a></div>
+{% if doc.vista_previa %}
+<figure class="int-page-preview"><img src="{{ url_for('integrador.vista_previa', clave=doc.id, pagina=pagina) }}" alt="Página {{ pagina }} de {{ doc.paginas }} del documento {{ doc.titulo }}"><figcaption>Página {{ pagina }} de {{ doc.paginas }} · vista del documento original</figcaption></figure>
+<nav class="int-pager" aria-label="Páginas del documento">{% if pagina > 1 %}<a href="{{ url_for('integrador.documento', clave=doc.id, pagina=pagina-1) }}">← Página anterior</a>{% else %}<span>Inicio del documento</span>{% endif %}{% if pagina < doc.paginas %}<a href="{{ url_for('integrador.documento', clave=doc.id, pagina=pagina+1) }}">Página siguiente →</a>{% else %}<span>Fin del documento</span>{% endif %}</nav>
+<p class="sub int-page-note">Para buscar, seleccionar texto o imprimir, abre el PDF original en otra pestaña.</p>
+{% else %}<iframe class="int-pdf" src="{{ url_for('integrador.archivo', clave=doc.id) }}#page={{ pagina }}" title="{{ doc.titulo }} · página {{ pagina }}"></iframe><p class="sub">Si tu navegador no muestra el PDF, usa Abrir PDF en otra pestaña o Descargar original.</p>{% endif %}
+{% else %}<section class="int-file-download"><span class="int-filetype">{{ doc.archivo.rsplit('.',1)[-1]|upper }}</span><h2>Archivo original del trabajo</h2><p>Descárgalo para consultarlo en la aplicación compatible con este formato.</p><a class="btn btn-primary" href="{{ url_for('integrador.archivo', clave=doc.id, descargar=1) }}">Descargar documento</a></section>{% endif %}
+<details class="int-integrity"><summary>Procedencia del archivo</summary><p>La copia conserva el contenido del documento original del semestre. Huella SHA-256:</p><code>{{ doc.sha256 }}</code></details>
+{% endblock %}

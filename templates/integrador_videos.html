@@ -1,0 +1,15 @@
+{% if recursos %}
+<section class="int-videos" id="videos" aria-label="Videos y actividades del curso">
+  <div class="int-section-head"><h2>Videos y actividades del curso</h2><span class="sub">Material compartido por el grupo</span></div>
+  <div class="int-video-grid">
+  {% for r in recursos %}
+    <article class="int-video-card">
+      <div class="int-video-top"><span class="int-play" aria-hidden="true">▷</span><span>Carpeta de videos · Google Drive</span></div>
+      <h3>{{ r.titulo }}</h3><p>{{ r.descripcion }}</p><p class="int-video-note">{{ r.nota }}</p>
+      <a href="{{ r.url }}" target="_blank" rel="noopener noreferrer">Abrir carpeta en Drive <span aria-hidden="true">↗</span></a>
+    </article>
+  {% endfor %}
+  </div>
+  <p class="sub int-video-access">Los videos se consultan en Drive con los permisos originales de cada carpeta.</p>
+</section>
+{% endif %}

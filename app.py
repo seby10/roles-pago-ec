@@ -161,6 +161,8 @@ app.secret_key = os.environ.get("SECRET_KEY") or (secrets.token_hex(32) if EDIT_
 
 import paz_salvo
 paz_salvo.registrar(app, db=lambda: db(), empresa=lambda: empresa(), password=lambda: EDIT_PASSWORD)
+import integrador
+integrador.registrar(app)
 
 
 # ------------------------------------------------------------------ base de datos
@@ -743,7 +745,7 @@ def obligaciones(hoy, e):
     return sorted((ev for ev in eventos if ev[0] >= hoy), key=lambda ev: ev[0])[:6]
 
 
-@app.get("/")
+@app.get("/nomina/resumen")
 def resumen():
     hoy = date.today()
     org = estructura_organizacional()
