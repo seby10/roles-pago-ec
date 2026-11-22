@@ -6,7 +6,7 @@ from pathlib import Path
 
 from flask import Blueprint, abort, render_template, request, send_file
 
-from integrador_contenido import MODULOS, RECURSOS
+from integrador_contenido import IDENTIDAD, MODULOS, RECURSOS
 
 RAIZ = Path(__file__).resolve().parent
 DIRECTORIO = RAIZ / "evidencias_integrador"
@@ -33,6 +33,12 @@ def inicio():
     docs = documentos()
     return render_template("integrador_inicio.html", modulos=MODULOS, n_documentos=len(docs), recursos=RECURSOS,
                            conteos={m["id"]: sum(d["modulo"] == m["id"] for d in docs) for m in MODULOS})
+
+
+@bp.get("/empresa")
+def empresa():
+    """Identidad del emprendimiento: marca, misión, visión y FODA ya definidos en la PEA 1."""
+    return render_template("integrador_empresa.html", ide=IDENTIDAD, modulos=MODULOS)
 
 
 @bp.get("/modulos/<clave>")
