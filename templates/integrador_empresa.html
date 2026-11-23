@@ -1,0 +1,82 @@
+{% extends "integrador_base.html" %}
+{% block title %}La empresa{% endblock %}
+{% block content %}
+<nav class="int-breadcrumb" aria-label="Ruta de navegación"><a href="{{ url_for('integrador.inicio') }}">Proyecto integrador</a><span aria-hidden="true">/</span><span>La empresa</span></nav>
+
+<section class="emp-hero">
+  <img class="emp-logo" src="{{ url_for('logo') }}" alt="Logotipo de {{ ide.nombre }}" width="104" height="104">
+  <div>
+    <div class="eyebrow">Identidad del emprendimiento</div>
+    <h1 class="emp-name">{{ ide.nombre }}</h1>
+    <p class="int-lead">{{ ide.producto }}</p>
+    <dl class="emp-facts">
+      <div><dt>Razón social del caso</dt><dd>{{ ide.razon }}</dd></div>
+      <div><dt>Ámbito de operación</dt><dd>{{ ide.ambito }}</dd></div>
+      <div><dt>Asignatura</dt><dd>{{ ide.asignatura }}</dd></div>
+    </dl>
+  </div>
+</section>
+
+<p class="int-intro">{{ ide.origen_nombre }}</p>
+
+<section class="emp-pair" aria-label="Misión y visión">
+  <article><div class="eyebrow">Misión</div><p>{{ ide.mision }}</p></article>
+  <article><div class="eyebrow">Visión</div><p>{{ ide.vision }}</p></article>
+</section>
+
+<section aria-labelledby="emp-marca">
+  <div class="int-section-head"><h2 id="emp-marca">Identidad visual</h2><span class="sub">{{ ide.fuente }}</span></div>
+  <div class="emp-swatches">
+    {% for nombre, hex, papel in ide.paleta %}
+    <div class="emp-swatch"><span style="background:{{ hex }}"></span><b>{{ nombre }}</b><small>{{ papel }} · {{ hex }}</small></div>
+    {% endfor %}
+  </div>
+  <dl class="int-canvas emp-marca">
+    {% for elemento, eleccion, significado in ide.marca %}
+    <div><dt>{{ elemento }} · {{ eleccion }}</dt><dd>{{ significado }}</dd></div>
+    {% endfor %}
+  </dl>
+</section>
+
+<section aria-labelledby="emp-problema">
+  <div class="int-section-head"><h2 id="emp-problema">Problema, cliente, solución y valor</h2><span class="sub">Matriz de la oportunidad</span></div>
+  <dl class="int-canvas">
+    {% for titulo, texto in ide.problema %}<div><dt>{{ titulo }}</dt><dd>{{ texto }}</dd></div>{% endfor %}
+  </dl>
+</section>
+
+<section aria-labelledby="emp-foda">
+  <div class="int-section-head"><h2 id="emp-foda">Matriz FODA</h2><span class="sub">Tres factores por cuadrante</span></div>
+  <div class="emp-foda">
+    {% for titulo, clase, puntos in ide.foda %}
+    <article class="emp-foda-q emp-foda-q--{{ clase }}">
+      <h3>{{ titulo }} <span>{{ clase }}</span></h3>
+      <ul>{% for p in puntos %}<li>{{ p }}</li>{% endfor %}</ul>
+    </article>
+    {% endfor %}
+  </div>
+</section>
+
+<section class="int-content-grid">
+  <div>
+    <div class="int-section-head"><h2>Ficha del caso tributario</h2><span class="sub">Supuesto de la PEA 2</span></div>
+    <dl class="emp-ficha">
+      {% for clave, valor in ide.ficha %}<div><dt>{{ clave }}</dt><dd>{{ valor }}</dd></div>{% endfor %}
+    </dl>
+    <p class="sub emp-nota">{{ ide.nota }}</p>
+  </div>
+  <aside class="int-context">
+    <div class="eyebrow">Equipo de trabajo</div>
+    <h2>Grupo 1 · Octavo «A»</h2>
+    <ul class="emp-equipo">{% for persona in ide.equipo %}<li>{{ persona }}</li>{% endfor %}</ul>
+    <a class="int-source" href="{{ url_for('integrador.modulo', clave='emprendimiento') }}">Ver el módulo de Emprendimiento →</a>
+  </aside>
+</section>
+
+<div class="int-connection"><div class="eyebrow">Del plan a la plataforma</div><p>Esta identidad es la que recorre los cuatro módulos: el plan de negocios la define, la documentación tributaria la formaliza, la nómina contrata al equipo que la sostiene y la liquidación cierra esa relación con evidencias.</p></div>
+
+<nav class="int-pager" aria-label="Continuar recorrido">
+  <a href="{{ url_for('integrador.inicio') }}">← Inicio del proyecto</a>
+  <a href="{{ url_for('integrador.modulo', clave='emprendimiento') }}">01 Emprendimiento →</a>
+</nav>
+{% endblock %}

@@ -30,6 +30,7 @@
 {%- elif n == 'tributos' %}<circle cx="12" cy="12" r="8.5"/><path d="M9 15l6-6"/><circle cx="9.3" cy="9.3" r=".9"/><circle cx="14.7" cy="14.7" r=".9"/>
 {%- elif n == 'nomina' %}<path d="M3.5 7.5a2 2 0 0 1 2-2H18v3"/><rect x="3.5" y="8.5" width="17" height="11" rx="2"/><path d="M16 14h2"/>
 {%- elif n == 'liquidacion' %}<path d="M14 4h5v16h-5"/><path d="M4 12h10M10.5 8.5 14 12l-3.5 3.5"/>
+{%- elif n == 'empresa' %}<path d="M3.5 20.5h17"/><path d="M5.5 20.5V8.2L12 4l6.5 4.2v12.3"/><path d="M10 20.5v-4.3h4v4.3"/><path d="M9 10.8h1.5M13.5 10.8H15M9 13.6h1.5M13.5 13.6H15"/>
 {%- elif n == 'biblioteca' %}<rect x="4" y="4" width="4" height="16" rx="1"/><rect x="10" y="4" width="4" height="16" rx="1"/><path d="M15.6 6.2l3.2-.8 2.7 12.4-3.2.8z"/>
 {%- elif n == 'paz' %}<path d="M12 3l7.5 2.8v5.6c0 4.3-3 7.8-7.5 9.6-4.5-1.8-7.5-5.3-7.5-9.6V5.8z"/><path d="M8.8 12l2.2 2.2 4.2-4.4"/>
 {%- elif n == 'colapsar' %}<rect x="3.5" y="4" width="17" height="16" rx="2.5"/><path d="M9.5 4v16"/><path class="chev" d="M15.5 10l-2 2 2 2"/>
@@ -39,13 +40,14 @@
 {% set grupos = [
   ('Proyecto integrador', [
     ('inicio', 'Panorama', url_for('integrador.inicio'), ep == 'integrador.inicio'),
+    ('empresa', 'La empresa', url_for('integrador.empresa'), ep == 'integrador.empresa'),
     ('emprendimiento', 'Emprendimiento', url_for('integrador.modulo', clave='emprendimiento'), ep == 'integrador.modulo' and request.view_args.get('clave') == 'emprendimiento'),
     ('tributos', 'Obligaciones tributarias', url_for('integrador.modulo', clave='tributarias'), ep == 'integrador.modulo' and request.view_args.get('clave') == 'tributarias'),
     ('nomina', 'Remuneraciones y nómina', url_for('integrador.modulo', clave='nomina'), ep == 'integrador.modulo' and request.view_args.get('clave') == 'nomina'),
     ('liquidacion', 'Liquidación laboral', url_for('integrador.modulo', clave='liquidacion'), ep == 'integrador.modulo' and request.view_args.get('clave') == 'liquidacion'),
     ('biblioteca', 'Biblioteca del semestre', url_for('integrador.biblioteca'), ep in ('integrador.biblioteca', 'integrador.documento')),
   ]),
-  ('Gestión de nómina', [
+  ('Automatizaciones · 03 y 04', [
     ('resumen', 'Resumen', url_for('resumen'), ep == 'resumen'),
     ('empleados', 'Empleados', url_for('empleados_lista'), ep.startswith('empleado')),
     ('organigrama', 'Organigrama', url_for('organigrama'), ep.startswith('organigrama')),

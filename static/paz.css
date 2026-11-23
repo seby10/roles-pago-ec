@@ -12,8 +12,8 @@
 .paz-app .panel-body > p { margin:10px 0; }
 .paz-app .panel-body > h2 + p { margin-top:8px; }
 .paz-app .btn { border-radius:var(--radius-sm); min-height:38px; }
-.paz-app .btn-primary { background:var(--ink); border-color:var(--ink); color:#fff; }
-.paz-app .btn-primary:hover { background:#1f352a; border-color:#1f352a; }
+.paz-app .btn-primary { background:var(--brand); border-color:var(--brand); color:#fff; }
+.paz-app .btn-primary:hover { background:var(--brand-2); border-color:var(--brand-2); }
 .paz-app .btn:active { transform:scale(.98); }
 .paz-app .input { min-width:0; max-width:100%; border-radius:6px; }
 .paz-app input[type=file] { height:auto; min-height:44px; padding:8px; background:var(--surface); flex:1; }
@@ -28,7 +28,7 @@
 .paz-breadcrumb { display:flex; gap:8px; align-items:center; font-size:13px; margin-bottom:16px; color:var(--muted); }
 .paz-breadcrumb a { text-decoration:none; }
 .paz-status { display:inline-flex; gap:7px; align-items:center; font-size:12px; font-weight:500; white-space:nowrap; }
-.paz-status::before { content:''; width:6px; height:6px; border-radius:50%; background:#8a908b; flex:none; }
+.paz-status::before { content:''; width:6px; height:6px; border-radius:50%; background:#8a91a3; flex:none; }
 .paz-status[data-state=conforme]::before,.paz-status[data-state=aprobado]::before,.paz-status[data-state=firmado]::before { background:#23734e; }
 .paz-status[data-state=observado]::before,.paz-status[data-state=anulado]::before { background:#b44235; }
 .paz-status[data-state=emitido]::before { background:#23734e; }

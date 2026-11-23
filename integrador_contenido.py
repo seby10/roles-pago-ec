@@ -20,7 +20,7 @@ RECURSOS = [
 ]
 
 MODULOS = [
-    dict(id="emprendimiento", numero="01", titulo="Emprendimiento", icono="organigrama", tono="verde",
+    dict(id="emprendimiento", numero="01", titulo="Emprendimiento", icono="organigrama", tono="azulmarino",
          subtitulo="De una necesidad local a un plan empresarial",
          descripcion="Idea de negocio, Canvas, estrategia, mercado, operación y viabilidad de FERIAUTO.",
          fuente="PEA 1 · informe y plan de negocios", principal="pea1",
@@ -89,7 +89,7 @@ MODULOS = [
                                 ("organigrama", "Ver organigrama"), ("empleados_lista", "Consultar empleados"),
                                 ("escalas", "Escalas salariales")],
          conexion="La nómina documenta la relación laboral durante su vigencia. El último módulo reúne su terminación y las evidencias de cierre."),
-    dict(id="liquidacion", numero="04", titulo="Liquidación laboral", icono="roles", tono="azul",
+    dict(id="liquidacion", numero="04", titulo="Liquidación laboral", icono="roles", tono="rojo",
          subtitulo="Terminación y cierre con evidencias",
          descripcion="Formas de terminación, resultados ministeriales y expediente de paz y salvo ya desarrollado.",
          fuente="APE 4 · caso ficticio y resultados del 17 de noviembre de 2026", principal="paz-informe",
@@ -108,3 +108,73 @@ MODULOS = [
          enlaces=[], acciones=[("paz.lista", "Abrir expedientes de paz y salvo"), ("paz.caso", "Consultar guía del caso existente")],
          conexion="El expediente cierra el recorrido: idea y modelo de negocio, documentación tributaria, relación laboral y terminación respaldada por evidencias."),
 ]
+
+# Identidad del emprendimiento. Transcripción de la PEA 1 (Anexo 1, secciones 1 y 4)
+# y de la ficha tributaria de la PEA 2. No se redefine la marca aquí.
+IDENTIDAD = dict(
+    nombre="FERIAUTO",
+    razon="FERIAUTO S.A.S.",
+    lema="Compra y vende con respaldo",
+    producto="Aplicación móvil de marketplace de vehículos usados para la feria de carros de Ambato.",
+    ambito="Ciudad de Ambato, provincia de Tungurahua, Ecuador.",
+    asignatura="Emprendimiento y Legislación Laboral · Carrera de Software, FISEI, UTA.",
+    fuente="PEA 1 · Anexo 1, Plan de Negocios",
+    origen_nombre="El nombre fusiona «feria» y «auto»: traslada el comercio tradicional de vehículos "
+                  "a una experiencia digital y móvil, y destaca además la letra «A» de Ambato.",
+    mision="Digitalizar y formalizar la compra y venta de vehículos usados en Ambato mediante una "
+           "plataforma tecnológica intuitiva y segura para el usuario, brindando a comerciantes y "
+           "ciudadanos un entorno de transacciones verificadas, seguras y transparentes.",
+    vision="Ser, para el año 2031, el ecosistema digital líder a nivel nacional en la gestión y "
+           "modernización de ferias vehiculares, reconocidos por transformar los mercados "
+           "tradicionales en entornos comerciales transparentes, seguros y tecnológicamente avanzados.",
+    marca=[
+        ("Nombre", "FERIAUTO",
+         "Marca corta y memorable que traslada el comercio físico de vehículos a una experiencia digital."),
+        ("Forma o símbolo", "Letra «A», vehículo y circuitos",
+         "Integra la «A» de Auto y de Ambato, un vehículo y circuitos tecnológicos dentro del formato "
+         "de una aplicación móvil."),
+        ("Color principal", "Azul oscuro",
+         "Representa seguridad, confianza y profesionalismo, determinantes al comprar o vender un vehículo."),
+        ("Color secundario", "Rojo / anaranjado",
+         "Representa dinamismo, movimiento y acción; destaca la palabra AUTO dentro del logotipo."),
+    ],
+    paleta=[("Azul oscuro", "#13213d", "Principal"), ("Rojo", "#c8202a", "Secundario"),
+            ("Blanco", "#ffffff", "Contraste")],
+    equipo=["Jhanina Conterón Villamarín", "Daylé García Fernández",
+            "Pablo Andrés Montero López", "Fabricio Sebastián Constante Naranjo"],
+    problema=[
+        ("Problema", "El proceso informal de compraventa en la feria de carros de Ambato dificulta "
+                     "verificar la información de los vehículos y genera desconfianza entre las partes."),
+        ("Cliente o usuario", "Comerciantes y vendedores de vehículos usados de la feria, y personas "
+                              "interesadas en comprar. El cliente que financia la solución es el GAD "
+                              "Municipalidad de Ambato."),
+        ("Solución", "Plataforma digital que permite publicar y buscar vehículos usados, verificar la "
+                     "información relevante y generar un reporte que facilite la evaluación previa a la compra."),
+        ("Valor", "Mayor confianza y seguridad en el proceso, acceso a información verificable y una "
+                  "gestión más ordenada de las oportunidades de venta."),
+    ],
+    foda=[
+        ("Fortalezas", "internas", [
+            "Propuesta de valor altamente diferenciada en el mercado.",
+            "Equipo capaz de desarrollar una plataforma robusta y moderna.",
+            "Modelo de negocio que elimina la barrera de costo para el usuario final."]),
+        ("Oportunidades", "externas", [
+            "Alto interés en modernizar el proceso de comercio automotriz.",
+            "Necesidad ciudadana de reducir las estafas en la compraventa de autos.",
+            "Creciente tendencia de las administraciones locales a modelos de «ciudades inteligentes»."]),
+        ("Debilidades", "internas", [
+            "Dependencia del financiamiento gubernamental mediante contratos.",
+            "Falta de experiencia comercial en negociación y contratación con entidades municipales.",
+            "Marca nueva en el mercado, sin reconocimiento previo entre los comerciantes de la feria."]),
+        ("Amenazas", "externas", [
+            "Resistencia al cambio de los comerciantes más apegados a los sistemas tradicionales.",
+            "Burocracia y retrasos en el proceso de adopción del software.",
+            "Inestabilidad o restricciones en el acceso a las bases de datos externas."]),
+    ],
+    ficha=[("Razón social del caso", "FERIAUTO S.A.S."), ("RUC simulado", "1850001234001"),
+           ("Actividad económica", "Programación informática · CIIU J62010101"),
+           ("Régimen", "Régimen General, obligada a llevar contabilidad"),
+           ("Domicilio del ejercicio", "Ambato, Tungurahua")],
+    nota="La ficha tributaria corresponde al supuesto académico de la PEA 2. El RUC es simulado y no "
+         "acredita inscripción, declaraciones ni pagos reales.",
+)
