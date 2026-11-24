@@ -1,0 +1,16 @@
+{% extends "integrador_base.html" %}
+{% block title %}Fuentes y enlaces{% endblock %}
+{% block content %}
+<nav class="int-breadcrumb" aria-label="Ruta de navegación"><a href="{{ url_for('integrador.inicio') }}">Proyecto integrador</a><span aria-hidden="true">/</span><span>Fuentes y enlaces</span></nav>
+<div class="page-head"><div><div class="eyebrow">Páginas externas</div><h1 class="title">Fuentes y enlaces</h1><p class="meta">Los sitios oficiales y herramientas donde se hicieron las consultas y actividades de cada módulo.</p></div></div>
+{% for m in modulos %}
+<section aria-labelledby="f-{{ m.id }}" class="fuentes-grupo">
+  <div class="int-section-head"><h2 id="f-{{ m.id }}">{{ m.numero }} · {{ m.titulo }}</h2><a class="int-source" href="{{ url_for('integrador.modulo', clave=m.id) }}">Abrir módulo →</a></div>
+  <div class="int-doc-list">
+    {% for mod, nombre, url, uso in fuentes if mod == m.id %}
+    <a href="{{ url }}" target="_blank" rel="noopener noreferrer"><span><b>{{ nombre }}</b><small>{{ uso }}</small></span><span class="int-doc-tag">{{ url.split('/')[2] }} ↗</span></a>
+    {% endfor %}
+  </div>
+</section>
+{% endfor %}
+{% endblock %}

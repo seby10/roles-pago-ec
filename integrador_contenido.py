@@ -178,3 +178,29 @@ IDENTIDAD = dict(
     nota="La ficha tributaria corresponde al supuesto académico de la PEA 2. El RUC es simulado y no "
          "acredita inscripción, declaraciones ni pagos reales.",
 )
+
+
+# Páginas externas donde se consultó o realizó cada trabajo: (módulo, nombre, url, para qué se usó).
+FUENTES = [
+    ("emprendimiento", "Encuesta de mercado (APE 1)", "https://docs.google.com/forms/d/e/1FAIpQLSdaxGpggOv0VFiTIK4URlKIncxfdREqe-vdecN7IRcjYFcDoQ/viewform",
+     "Formulario aplicado en la guía APE 1 para validar la oportunidad de FERIAUTO."),
+    ("emprendimiento", "Juego del registro de marca", "https://feriauto-juego.vercel.app/", "Actividad gamificada sobre el registro de la marca."),
+    ("emprendimiento", "Elevator pitch y Canvas (Drive)", RECURSOS[0]["url"], "Carpeta con el video del pitch y el modelo de negocio."),
+    ("emprendimiento", "Clasificación CIIU · INEC", "https://www.ecuadorencifras.gob.ec/clasificacion-internacional-industrial-uniforme-ciiu/",
+     "Clasificación de la actividad económica (programación informática, CIIU J62010101)."),
+    ("emprendimiento", "Superintendencia de Compañías", "https://www.supercias.gob.ec/", "Constitución y marco de la sociedad por acciones simplificada."),
+    ("tributarias", "RUC · SRI", "https://www.sri.gob.ec/ruc", "Inscripción y actualización del RUC (Tarea 06)."),
+    ("tributarias", "SRI en línea", "https://srienlinea.sri.gob.ec/", "Consulta del RUC, facturación y declaraciones."),
+    ("tributarias", "Facturación electrónica · SRI", "https://www.sri.gob.ec/facturacion-electronica", "Emisión de comprobantes con el facturador del SRI (Tarea 07)."),
+    ("tributarias", "Formularios e instructivos · SRI", "https://www.sri.gob.ec/formularios-e-instructivos", "Formulario 104 de IVA y su instructivo (PEA 2)."),
+    ("tributarias", "SENADI · propiedad intelectual", "https://www.senadi.gob.ec/", "Búsqueda de antecedentes y registro de la marca (Tarea 10)."),
+    ("nomina", "Ministerio del Trabajo", "https://www.trabajo.gob.ec/", "Salarios mínimos sectoriales y normativa de remuneraciones."),
+    ("nomina", "IESS", "https://www.iess.gob.ec/", "Afiliación y aportes patronales y personales."),
+    ("liquidacion", "Calculadora de liquidaciones · Ministerio del Trabajo", "https://calculadoras.trabajo.gob.ec/liquidaciones",
+     "Resultados oficiales del 17 de noviembre de 2026 (acuerdo USD 162,83; despido USD 1.692,83)."),
+    ("liquidacion", "Sistema Único de Trabajo (SUT)", "https://sut.trabajo.gob.ec/", "Trámite de finiquito y avisos de salida."),
+    ("liquidacion", "Casos judiciales (Drive)", RECURSOS[1]["url"], "Videos de los casos judiciales del curso."),
+    ("liquidacion", "El despido ideal (Drive)", RECURSOS[2]["url"], "Actividad sobre cómo comunicar una desvinculación."),
+]
+for _m in MODULOS:   # cada módulo muestra también sus fuentes externas en la columna de contexto
+    _m["enlaces"] = list(_m.get("enlaces", [])) + [(n, u, d) for mod, n, u, d in FUENTES if mod == _m["id"] and u not in [e[1] for e in _m.get("enlaces", [])]]

@@ -86,3 +86,4 @@
   .emp-ficha>div{grid-template-columns:1fr;gap:3px}
 }
 @media print{.int-tabs,.int-search,.int-pdf-tools,.int-delivery,.int-pager{display:none}.int-card,.int-story,.int-results,.int-context,.emp-foda-q,.emp-pair article{break-inside:avoid}.int-hero h1{font-size:40px}.int-content-grid{display:block}.int-context{margin-bottom:20px}.int-pdf{height:850px}}
+.fuentes-grupo{margin-bottom:40px}.fuentes-grupo .int-doc-list>a>span:first-child{flex:1;min-width:0}
